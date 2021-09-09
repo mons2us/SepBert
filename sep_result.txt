@@ -1,0 +1,415 @@
+[CORRECT PREDICTION]
+father-of-two : paul doyle , 56 , has been jailed after being unmasked as the head of drugs ring
+0.0
+a gangster who lived a life of luxury in a mansion near premier league footballers has been jailed for 16 years after being unmasked as the head of a drugs ring .
+0.0
+father-of-two paul doyle , 56 , moved his family into an # 820,000 home in altrincham , cheshire , despite having never worked and living life ` on tick ' and incapacity handouts .
+-1.4577744007110596
+doyle - described as a ` well-known and colourful character ' in his native salford - put down a # 200,000 deposit and obtained a # 600,000 mortgage by falsely claiming his wife jeanette , 49 , worked as a company executive .
+-1.4549192190170288
+but his family were probed after scandalising the leafy neighbourhood in altrincham where his teenage son regularly rode quad bikes around the streets and later received an asbo for terrorising other local children who complained of being robbed and beaten up .
+-1.451143503189087
+police kept watch on the family 's home where doyle chopped down the huge front hedge so he could check for unwanted visitors outside .
+-1.4247785806655884
+he was eventually arrested during a raid on his five-bedroom house after a major investigation into the supply of various drugs in the north of england , which culminated in the seizure of # 15million of cocaine and a haul of heroin .
+-1.450473427772522
+the family have since lost the property and mrs doyle is now living in a council house in salford .
+-1.3751245737075806
+doyle admitted supplying class a and b drugs , between 2012 and 2014 , plus money laundering and benefit fraud offences at manchester crown court .
+-1.4235447645187378
+he now faces a proceeds of crime hearing .
+1.8112819194793701
+( cnn ) police in india are putting aside their batons in favor of an overhead solution to angry and unruly crowds : pepper-spraying drones .
+-1.4405748844146729
+yashasvi yadav , senior superintendent of police in lucknow , northern india , told cnn the city 's force has bought four drones and is in the process of purchasing one more .
+-1.460243821144104
+" the drones have been tested in controlled conditions , " he said .
+-1.450142502784729
+" they have been very successful and will be used by the lucknow police whenever there are violent protests or mob attacks . "
+-1.4291912317276
+the miniature aircraft will be fitted with a camera and pepper spray ; each drone costs between $ 9,560 and $ 19,300 , yadav added .
+0.0
+views on the new measure are mixed , with some concerned about the suppression of freedom of speech -- an already contentious issue in india .
+0.0
+last month , the country failed to enforce a law that would allow authorities to arrest people who post offensive material on social media .
+
+
+
+[CORRECT PREDICTION]
+democratic presidential candidate hillary clinton enjoyed some downtime with husband bill on saturday afternoon , taking a stroll near their chappaqua , new york , home .
+0.0
+meanwhile , her two ` scooby ' campaign vans got some tlc of their own at a local body shop , where they were also hand washed .
+0.0
+the aspiring leader of the free world and her husband were spotted wearing blue ball caps - hillary 's bearing the clinton foundation logo - and matching dark blue shirts as they soaked in the sun and walked hand-in-hand through a nearby park .
+-1.4424192905426025
+mrs clinton will hit the campaign trail again today in new hampshire , where she 'll hold a round table at a family-owned business this afternoon .
+-1.4522535800933838
+she 'll participate in another tomorrow morning at a community college during her two-day swing through the granite state .
+-1.435583233833313
+exclusive : hilary clinton and husband bill go for a stroll while holding hands in a park in chappaqua , new york .
+-1.4506067037582397
+the aspiring leader of the free world and her husband were spotted wearing blue ball caps - hillary 's bearing the clinton foundation logo - and matching dark blue polo shirts as they soaked in the sun
+-1.4146047830581665
+check-up : the scooby vans had made the 1,000 miles trip back from iowa since hillary flew home commercial last week
+-1.416959524154663
+sparkling : the secret of keeping the scooby fleet immaculate is regular washing
+-1.4351541996002197
+tune-up : clinton 's presidential campaign prepared to hit the road again on saturday , taking the two armored scooby vans to a car shop for inspection
+1.8385428190231323
+a violent jamaican drug dealer who evaded deportation for years before he launched a frenzied hammer and knife attack on a young woman in front of her six-year-old daughter could spend the rest of his life behind bars .
+-1.4453866481781006
+lloyd byfield , 48 , pursued a relationship with 26-year-old leighann duffy before he armed himself with a claw hammer and a large red handled kitchen knife and smashed his way into her flat in walthamstow , east london , on september 1 last year .
+-1.4523967504501343
+after pleading guilty to murder , he was sentenced to life with a minimum term of 26-and-a-half years by judge nicholas cooke who told him he may never be released .
+-1.4598510265350342
+monster : violent drug dealer lloyd byfield ( left ) who evaded deportation for years launched a brutal and frenzied knife and hammer attack on leighann duffy , 26 , when he burst into her flat in walthamstow , london
+-1.4498261213302612
+judge cooke told byfield he must have had a ` heart of stone ' to have killed ms duffy despite the presence of the young girl who was herself attacked when she tried to intervene .
+-1.4399439096450806
+during the old bailey hearing , judge cooke also expressed his ` unhappiness ' at the failure of authorities to deport byfield back to jamaica when he attacked another woman with a chisel and was jailed for burglary in 2005 .
+-1.4424065351486206
+he said the murder could have been prevented if he had been sent back to jamaica then .
+0.0
+byfield came to the uk in 2000 and was granted indefinite leave to remain on june 29 , 2004 after getting married to a british woman despite being in another relationship with the mother of his child , patricia white .
+0.0
+nine days before leave was granted , he stabbed ms white with a chisel .
+
+
+
+[CORRECT PREDICTION]
+a wyoming state penitentiary inmate has pleaded guilty to trying -- from behind bars -- to hire a hit man to kill his mother and stepfather so he could collect life insurance money and inherit their house .
+0.0
+andrew silicani , 23 , of cheyenne pleaded guilty on monday in federal court to four counts of using the mail in his unsuccessful plan to hire someone to carry out the murders .
+0.0
+he faces up to 40 years at sentencing this summer . '
+-1.4474778175354004
+i think it 's fair to say you 'll be looking at some time in custody , ' u.s. district judge nancy freudenthal told silicani as she advised him of his rights .
+-1.4512391090393066
+andrew silicani , 23 , of cheyenne , wyoming , pleaded guilty on monday to trying -- from behind bars -- to hire a hit man to kill his mother and stepfather so he could inherit their house
+-1.4512059688568115
+silicani pleaded guilty to all charges against him with no agreement from prosecutors to recommend a lesser sentence .
+-1.4441505670547485
+defense lawyer james barrett told freudenthal that silicani had rejected a plea offer from federal prosecutors that would have capped his prison time at 35 years and blocked the possibility that state prosecutors will seek to charge him with separate violations of state law .
+-1.4526662826538086
+speaking after the hearing , barrett said he thinks it 's likely that silicani will face additional state prosecution .
+0.5519675612449646
+marathon bombing trial are barred from attending this year 's
+-1.437801480293274
+race , a federal judge told the panel on tuesday as part of
+-1.4538649320602417
+instructions ahead of the trial 's sentencing phase .
+-1.4375019073486328
+dzhokhar tsarnaev , 21 , was convicted last week of planting
+-1.4394186735153198
+two homemade bombs at the crowded finish line of the world
+-1.4374717473983765
+famous marathon in 2013 , killing three people and injuring 264
+-1.4312125444412231
+the same jury that convicted tsarnaev will hear testimony on
+-1.4263213872909546
+whether he should be sentenced to death or life in prison for
+0.0
+his crimes , starting next tuesday , the day after the 2015
+0.0
+judge george o'toole told jurors in the boston marathon bombing case they are not to attend this year 's race or related events
+
+
+
+[CORRECT PREDICTION]
+ravel morrison has posted a picture of himself posing in his new lazio bathrobe on his official instagram account .
+0.0
+the 22-year-old , who was released from his last contract at west ham following a series of disciplinary problems , is currently training with the serie a side ahead of his summer move .
+0.0
+morrison signed a pre-contract agreement with lazio in january , but a delay in squad registration means he is unable to make his debut for them until next season .
+-1.4601372480392456
+ravel morrison posted a picture of himself posing in his new lazio bathrobe on his official instagram account
+-1.4518107175827026
+morrison was released from his last contract at west ham following a series of disciplinary problems
+-1.4409455060958862
+morrison began his career at manchester united , and was once compared to paul scholes by sir alex ferguson .
+-1.4417167901992798
+but his career there was also blighted by off-field drama until he signed for west ham in 2012 .
+-1.4525493383407593
+he started last season superbly at the hammers , finding his way into the england u21 squad , but spent most of 2014 either on loan at qpr or cardiff in the championship .
+-1.3778361082077026
+the 22-year-old has signed a pre-contract agreement with lazio ahead of next season
+1.8286073207855225
+a mississippi senator 's personal assistant has been charged with trafficking drugs from china to use as payment for sexual favors .
+-1.4589074850082397
+police launched an investigation after seizing a package on april 9 with over a kilo of the date rape drug gbl addressed to fred pagan , office manager and personal assistant to sen. thad cochran ( r-ms ) .
+-1.4498990774154663
+raiding his home on thursday , they uncovered 181.5 grams of meth .
+-1.4551877975463867
+senator : thad cochran ( r-ms ) has yet to comment on the fact that his personal assistant and office manager fred pagan has been charged with trafficking drugs , including methamphetamine , from china
+-1.4547345638275146
+pagan was paid $ 160,000 in his senate role last year , the washington post reports .
+-1.3784964084625244
+the paper states pagan , 49 , has worked for cochran since he was 16 years old .
+-1.4189051389694214
+he is charged with one count of possession and intent to distribute methamphetamine and one count of importing a controlled substance .
+0.0
+the former is punishable by five to 40 years in prison , the latter by up to 20 .
+0.0
+pagan was released on friday after an initial court appearance .
+
+
+
+[CORRECT PREDICTION]
+raheem sterling may hold all the cards in his contract dispute with liverpool , but he needs to focus on his football rather than his pay-packet , according to former qpr boss harry redknapp .
+0.0
+redknapp insisted that sterling is not ready to move to the likes of real madrid at this stage of his career , so should stay at the club who have helped him develop so far .
+0.0
+however , the 68-year-old also conceded that , if he wants to force a move , there is very little liverpool can do to stop him .
+-1.4500539302825928
+raheem sterling should focus on his football rather than his contract according to harry redknapp
+-1.448791742324829
+sterling has turned down a new deal with liverpool and put off contract talks until the summer
+-1.4451364278793335
+` sterling is not going to go to real madrid at the moment i would n't think , so where could he go better in england ? '
+-1.440077781677246
+said redknapp while working as a pundit for bt sport . '
+-1.4243818521499634
+i think he 's at a great club , he 's working under a manger who obviously works hard with him on the training ground , eh 's improved him .
+-1.4380671977996826
+i think he needs to sign his contract and get on with his football .
+1.823936104774475
+a hotelier claims to be living in fear after her windows were smashed and she received intimidating phone calls after appearing on channel 4 's ` four in a bed ' criticising other hotels in the area .
+-1.4479509592056274
+jennifer mcgirr , 61 , said the abuse started when the windows to the tower view hotel , which she owns , were shattered after a man threw a brick at them in a ` premeditated ' attack .
+-1.4335052967071533
+she also claims to have had a stream of intimidating phone calls since starring on the reality tv show , where b&b owners visit each others properties and rate their stay .
+-1.4356104135513306
+hotelier jennifer mcgirr claims to be living in fear after her windows were smashed and she received intimidating phone calls after appearing on channel 4 's ` four in a bed '
+-1.4494671821594238
+during the programme , ms mcgirr described other hotels in blackpool , lancashire , as ` grim ' , in response to another couple 's claims that there were cheaper places to stay in the area .
+-1.4537285566329956
+she said : ` it 's come totally out of the blue .
+0.0
+it 's been very frightening really .
+0.0
+` where does all this hatred come from ? '
+
+
+
+[WRONG PREDICTION]
+andy murray tied the knot with kim sears on saturday at dunblane cathedral , as thousands of fans waited outside to greet the couple .
+0.0
+the tennis star , who announced his engagement in november last year , tied the knot in the 12th century cathedral before a relatively small group of their family members and close friends .
+0.0
+reverend colin renwick , led the service , was pictured outside the cathedral just after 3.00 pm this afternoon with the wedding taking place at around 4.00 pm .
+-1.460734486579895
+andy murray and his wife kim are all smiles after tying the knot at dunblane cathedral
+-1.4318352937698364
+kim shows her delight after marrying british tennis star murray on saturday afternoon
+-1.413891077041626
+the happy couple are covered in confetti as they make their way out of the wedding ceremony
+-1.436551809310913
+murray waves to his fans after making his way out of the cathedral following his wedding
+-0.05820589140057564
+( cnn ) percy sledge , the r&b belter whose biggest hit , " when a man loves a woman , " became a cornerstone of soul music , died tuesday .
+-1.4414118528366089
+sledge died in baton rouge , louisiana , said stephanie price of the east baton rouge parish coroner 's office .
+-1.4299274682998657
+sledge died of natural causes , said east baton rouge parish coroner dr. william clark .
+-1.4661891460418701
+he had been in hospice care for cancer , clark added .
+-1.3374675512313843
+in a career that started in the 1960s , sledge had a number of hits , including " take time to know her , " " warm and tender love " and " it tears me up " among them .
+-1.4315433502197266
+but his first and biggest hit , " when a man loves a woman , " towered over them all .
+-1.4443252086639404
+over a mournful , slowly rising instrumental track provided by organist spooner oldham , drummer roger hawkins and guitarist marlin greene -- key musicians of what became the muscle shoals sound , heard on countless soul records -- sledge crooned , pleaded and roared his way through the tune .
+-1.4263330698013306
+it came directly from the heart : originally called " why did you leave me baby , " he 'd written it about a former girlfriend , drawing from a tune that he used to sing to himself as a child .
+0.0
+" i hummed it all my life , even when i was picking and chopping cotton in the fields , " the alabama-born singer told the rock and roll hall of fame .
+0.0
+at the time , sledge was working as a hospital orderly , picking up gigs at night with a group called the esquires combo .
+
+
+
+[WRONG PREDICTION]
+( cnn ) prison life wo n't be pretty for aaron hernandez , the former nfl player and convicted murderer sentenced to life without parole .
+0.0
+after correction officers evaluate him , he will be shipped to massachusetts ' flagship maximum-security prison , one of the most high-tech jails in the united states with no history of breakouts : the souza-baranowski correctional center in shirley , about 40 miles outside downtown boston .
+0.0
+it 's called souza , for short , and it 's the state 's newest prison , opened in 1998 , with a matrix of 366 cameras recording live 24 hours a day and a microwave detection perimeter with taut wire .
+-1.4421714544296265
+" i do n't know the date , but he 'll be going there .
+-1.427267074584961
+that 's the maximum-security facility , " department of corrections spokesman darren duarte said .
+-1.4531562328338623
+legal advocates for inmates describe souza as sterile and violent at once .
+-1.426740288734436
+its diverse demographic includes the young and the old , many of whom are also doing life .
+-1.2991218566894531
+one stubborn problem is that opiates are smuggled to inmates , the legal advocates said .
+-1.229240894317627
+like many women , i 've long dreamed of a bigger bust .
+-1.4528237581253052
+as a modest 34b i 've experimented with every push-up , plunge and balcony bra there is , so i 'm intrigued to learn of a new # 150 bra that claims to take you from a b-cup to a dd in an instant .
+-1.4572480916976929
+the scandfit try size -- dubbed ` the boob-job bra ' -- was developed to help women about to go under the knife decide what size implants to have .
+-1.458856463432312
+not surprisingly , it has gained a following among women like me who would never have surgery but love the idea of trying out a dream decolletage for a day .
+-1.4464932680130005
+at a size 34b , annabel cole ( pictured without the bra ) has long dreamed of having a bigger bust but would never have surgery , so she decided to put ` the boob-job bra ' through its paces
+-1.4436869621276855
+i decided to put the design through its paces in three variations -- a c cup , d cup and whopping dd !
+-1.4359499216079712
+starting with the smallest first , this is what i found ...
+-1.4571236371994019
+from b-cup to c-cup , but it 's too saggy
+0.0
+cleavage you can change like your clothes ?
+0.0
+i 'm terribly excited by the idea of the try size -- even more so when it arrives packaged in a white leather box .
+
+
+
+[CORRECT PREDICTION]
+the nepal earthquake that has killed at least 2,500 people was a ` nightmare waiting to happen ' , disaster experts said last night .
+0.0
+just a week ago , 50 earthquake scientists from country the world met in the capital kathmandu to discuss how the area would cope with such disaster .
+0.0
+resting on colliding tectonic plates , nepal is under constant threat of earthquake of natural disaster .
+-1.4544034004211426
+but experts claim its shoddy infrastructure and poor building standards make the country much less equipped to deal with the aftermath of major incidents .
+-1.4575778245925903
+the united states geological survey said the quake struck 81 kilometres ( 50 miles ) northwest of kathmandu at 06.11 gmt , with walls crumbling and families racing outside of their homes
+1.0175180435180664
+on sunday evening the death toll had crept up to 2,500 people across four countries , with hundreds still missing .
+-1.4416933059692383
+speaking of the nepalese capital where the scientific meeting was held , one expert said it the devastation was ` an accident waiting to happen ' .
+1.8172338008880615
+a man caught on film by surveillance cameras allegedly hitting his three-year-old toddler in the face at a supermarket was arrested on friday .
+-1.4554026126861572
+kero-tv reports 23-year-old justin whittington of bakersfield , california was taken into custody on thursday night on suspicion of child endangerment after the video of the alleged abuse surfaced online .
+-1.4416073560714722
+the relationship between the toddler and whittington has not yet been revealed by police but the owner of vest market harry dindral said the man was the boy 's father and said that he 's seen them in the store together before .
+-1.4576929807662964
+the punch : surveillance video shows a man chasing a toddler then hitting him in the face
+-1.4495707750320435
+the video posted to social media and shared thousands of times shows a boy running through vest market .
+-1.4598556756973267
+the toddler is approached by a man believed to be his father who hits him in the face .
+-1.4439448118209839
+the man then is then shown aggressively yanking up the toddler by his shirt .
+0.0
+a pregnant woman , can be seen coming and taking the distraught boy away .
+0.0
+the child appears to leave the store crying and covering his face .
+
+
+
+[CORRECT PREDICTION]
+a man caught on film by surveillance cameras allegedly hitting his three-year-old toddler in the face at a supermarket was arrested on friday .
+0.0
+kero-tv reports 23-year-old justin whittington of bakersfield , california was taken into custody on thursday night on suspicion of child endangerment after the video of the alleged abuse surfaced online .
+0.0
+the relationship between the toddler and whittington has not yet been revealed by police but the owner of vest market harry dindral said the man was the boy 's father and said that he 's seen them in the store together before .
+-1.4579964876174927
+the punch : surveillance video shows a man chasing a toddler then hitting him in the face
+-1.4435687065124512
+the video posted to social media and shared thousands of times shows a boy running through vest market .
+-1.4318302869796753
+the toddler is approached by a man believed to be his father who hits him in the face .
+-1.4643524885177612
+the man then is then shown aggressively yanking up the toddler by his shirt .
+-1.4448028802871704
+a pregnant woman , can be seen coming and taking the distraught boy away .
+-1.4054712057113647
+the child appears to leave the store crying and covering his face .
+-1.3596211671829224
+the police were notified of the video after it was leaked online .
+0.5744658708572388
+surrey have signed australia all-rounder moises henriques for this summer 's natwest t20 blast .
+-1.4586142301559448
+henriques will join surrey immediately after the indian premier league season concludes at the end of next month and will be with them throughout their blast campaign and also as overseas cover for kumar sangakkara - depending on the veteran sri lanka batsman 's test commitments in the second half of the summer .
+-1.4470188617706299
+australian all-rounder moises henriques has signed a deal to play in the t20 blast for surrey
+-1.460665225982666
+henriques , pictured in the big bash ( left ) and in odi action for australia ( right ) , will join after the ipl
+-1.4350361824035645
+twenty-eight-year-old henriques , capped by his country in all formats but not selected for the forthcoming ashes , said : ` i 'm really looking forward to playing for surrey this season .
+-1.4210803508758545
+it 's a club with a proud history and an exciting squad , and i hope to play my part in achieving success this summer .
+0.0
+` i 've seen some of the names that are coming to england to be involved in the natwest t20 blast this summer , so am looking forward to testing myself against some of the best players in the world . '
+0.0
+surrey director of cricket alec stewart added : ` moises is a fine all-round cricketer and will add great depth to our squad . '
+
+
+
+[CORRECT PREDICTION]
+almost 6,000 migrants were rescued in the mediterranean over the weekend , as traffickers took advantage of clement weather and calmer seas to dispatch dozens of boats .
+0.0
+between friday and sunday 5,629 migrants were picked up in the sicilian channel .
+0.0
+italy is the first port of call for migrants seeking new lives in europe .
+-1.4501798152923584
+160,000 made the journey last year , often on unseaworthy and overcrowded vessels .
+-1.3897982835769653
+nine bodies were recovered after a boat carrying more than 150 people capsized off the coast of libya , the italian coast guard said .
+-1.4207005500793457
+almost 6,000 migrants were rescued in the mediterranean over the weekend , as traffickers took advantage of calmer seas .
+-1.4343194961547852
+above , the italian coast guard attempts to help a migrant boat
+1.8140532970428467
+the idea that your tongue is separated into ` zones ' for different tastes has been widely debunked - although the exact process taking place is still poorly understood .
+-1.4341970682144165
+but now , for the first time , scientists have created a live imaging map of the tongue 's taste buds to determine what happens each time we place food in our mouths .
+-1.4475401639938354
+it reveals how taste buds have different cells that are used to differentiate between between the five basic groups of flavours .
+-1.4464325904846191
+a harvard-led study has mapped taste buds on a tongue for the first time .
+-1.4563275575637817
+scientists examined the different cells used to identify taste and watched these cells capture and process molecules live .
+-1.4133120775222778
+shown is a taste bud with receptor cells ( green ) , blood cells ( red ) and collagen surrounding the bud ( blue )
+-1.4413350820541382
+the research was conducted by an international team that included the australian national university ( anu ) and the harvard medical school .
+-1.395497441291809
+they used a specially designed microscope system to image single cells on the tongue of a mouse .
+0.0
+shining a bright infrared laser on the mouse 's tongue caused different parts of it and ` flavour molecules ' to fluoresce .
+0.0
+penguins lost three of the five basic vertebrate tastes - sweet , bitter and the savoury , meaty taste known as umami - more than 20 million years ago and never regained them , researchers have found .
+
+
+
+[CORRECT PREDICTION]
+the idea that your tongue is separated into ` zones ' for different tastes has been widely debunked - although the exact process taking place is still poorly understood .
+0.0
+but now , for the first time , scientists have created a live imaging map of the tongue 's taste buds to determine what happens each time we place food in our mouths .
+0.0
+it reveals how taste buds have different cells that are used to differentiate between between the five basic groups of flavours .
+-1.456744909286499
+a harvard-led study has mapped taste buds on a tongue for the first time .
+-1.4461784362792969
+scientists examined the different cells used to identify taste and watched these cells capture and process molecules live .
+-1.3530337810516357
+shown is a taste bud with receptor cells ( green ) , blood cells ( red ) and collagen surrounding the bud ( blue )
+-1.2520118951797485
+the research was conducted by an international team that included the australian national university ( anu ) and the harvard medical school .
+-1.3900814056396484
+they used a specially designed microscope system to image single cells on the tongue of a mouse .
+1.804357647895813
+` you 're getting the hang of this commentary lark , ' cooed martin tyler during sky sports coverage of the manchester derby .
+-1.4405118227005005
+tyler was , of course , one half of the commentary team that was once seen as being the best of the bunch .
+-1.4285811185836792
+that other half back then being his old partner andy gray .
+-1.3580509424209595
+nowadays , the man in the gantry alongside him is gary neville .
+-1.3718711137771606
+and it was his zinger after united 's fourth goal -- ` smalling has scored .
+-1.4244955778121948
+it 's a mauling for city ' -- that got the veteran lip mic man reaching for the platitudes .
+0.0
+and perhaps cementing the new best partnership in the process ?
+0.0
+i 'm not sure if neville actually carries his recently won royal television society pundit of the year award around with him ?
+
+
+

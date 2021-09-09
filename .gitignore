@@ -127,3 +127,13 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# dataset
+dataset/*
+
+# model (.pt files)
+models/*.pt
+models/events.out.tfevents*
+
+# bert weights
+temp/*
