@@ -219,18 +219,18 @@ class BertData():
 #    make dataset for training
 #    BertSep model
 # --------------------------------
-def make_data(args):
+def generate_sepdata(args):
     '''
     Using train_articles, ..., this function turns them into splitted articles (Bert-tokenized)
     Before that, train_articles.pt should be made such that they include every sources
     from oooo.0.bert.pt
     '''
-    corpora = format_to_lines(args)
+    #corpora = format_to_lines(args)
 
     corpus_type = ['train', 'valid', 'test']
     for corpus in corpus_type:
         logger.info(f"corpus type: {corpus}")
-        data_list = corpora[corpus]
+        data_list = torch.load(os.path.join(args.dataset_path, args.data_type, f'bert_data/{corpus}_dataset.pt'))
 
         # shuffle dataset
         if True:
@@ -255,6 +255,7 @@ def make_data(args):
         fix_flag = 'random' if args.random_point else 'fixed'
         save_pth = os.path.join(args.dataset_path, args.data_type, f'bertsep_data/bertsep_dt_{corpus}_w{args.window_size}_{fix_flag}.pt')
         torch.save(fin_dataset, save_pth)
+        logger.info(f"SepBert Dataset for {corpus} saved at: {save_pth}")
 
     # memory clear
     fin_dataset, sep_dataset = [], []
@@ -338,49 +339,11 @@ def _make_data(args, dataset, y_ratio=0.5, use_stair=True, random_point=False):
     return fin_dataset
 
 
-# Dataset Generation
-# for separation accuracy (not classification acc!)
-def _make_sepdata(args, dataset):
+def generate_basedata(args):
     '''
-    generate mixed documents for given list of cleaned data
+    From tokenized .json format documents,
+    create list type articles which 
     '''
-    # Define Bert preprocessor
-    bert = BertData(args)
-
-    # Generate mixed documents
-    mixed_doc_set = []
-    assert args.test_sep_len < len(dataset)
-    max_len = len(dataset) - 1 if args.test_sep_len == -1 else args.test_sep_len
-
-    for i in range(max_len):
-        lh_count = min(random.randint(7, 10), len(dataset[i]))
-        rh_count = min(random.randint(7, 10), len(dataset[i+1]))
-        lh_doc = dataset[i][:lh_count]
-        rh_doc = dataset[i+1][:rh_count]
-        gt = lh_count - 1
-
-        src_doc = lh_doc + rh_doc
-        mixed_doc_set.append((src_doc, gt))
-    
-    fin_dataset = []
-    for idx, (d, _gt) in enumerate(mixed_doc_set):
-        source, tgt = d, ''
-        sent_labels = ''
-        src_subtoken_idxs, segments_ids, cls_ids, src_txt = bert.preprocess(source,
-                                                                            use_bert_basic_tokenizer=args.use_bert_basic_tokenizer,
-                                                                            is_test=False)
-        data_dict = {'src': src_subtoken_idxs,
-                    'segs': segments_ids,
-                    'clss': cls_ids,
-                    'src_txt': src_txt,
-                    'sep_gt': _gt}
-        fin_dataset.append(data_dict)
-
-    random.shuffle(fin_dataset)
-    return fin_dataset
-
-
-def format_to_lines(args):
     target_dir = os.path.join(args.dataset_path, 'cnndm/tokenized_texts')
     files = [f for f in glob(os.path.join(target_dir, '*.json'))]
 
@@ -402,16 +365,26 @@ def format_to_lines(args):
     def _clean_doc(documents):
         clean_set = []
         for doc in documents:
+            # remove (cnn) at the very beginning of an article, if exists.
+            # They might induce bias into the model
+            if ''.join(doc[0][:3]) == '(cnn)':
+                doc[0] = doc[0][3:]
+
             doc_clean = [sent for sent in doc if
                             (len(sent) >= args.min_src_ntokens_per_sent) # 10
                         and (len(sent) < args.max_src_ntokens_per_sent)] # 200
+
             ## !! TODO !! args.min_src_nsents 현재 10인데 이거는 sep_acc 계산할 때만 하도록 수정
             if len(doc_clean) >= args.min_src_nsents: # 10
-                doc_clean = [' '.join(sent) for sent in doc_clean]
+                doc_clean = [' '.join(sent).strip() for sent in doc_clean]
                 clean_set.append(doc_clean)
         return clean_set
 
     tmp_num = len(dataset)
+
+    import IPython
+    IPython.embed(); exit()
+
     dataset = _clean_doc(dataset)
     logger.info(f"Doc number after cleansing: {tmp_num} --> {len(dataset)}")
 
@@ -424,12 +397,20 @@ def format_to_lines(args):
             'test': dataset[train_len+valid_len:]}
     dataset = []
     gc.collect()
-    return corpora
+
+    for k in corpora.keys():
+        save_pth = os.path.join(args.dataset_path, args.data_type, f'bert_data/{k}_dataset.pt')
+        torch.save(corpora[k], save_pth)
+        logger.info(f"Dataset: {k} saved. Length: {len(corpora[k])}")
+
 
 def _format_to_lines(params):
     f, args = params
     source = load_json(f, args.lower)
     return source
+
+
+
 
 
 
@@ -646,3 +627,47 @@ def _format_to_lines(params):
 #             tgt.append(sent.split())
 #         return {'src': source, 'tgt': tgt}
 #     return None
+
+
+
+
+# # Dataset Generation
+# # for separation accuracy (not classification acc!)
+# def _make_sepdata(args, dataset):
+#     '''
+#     generate mixed documents for given list of cleaned data
+#     '''
+#     # Define Bert preprocessor
+#     bert = BertData(args)
+
+#     # Generate mixed documents
+#     mixed_doc_set = []
+#     assert args.test_sep_len < len(dataset)
+#     max_len = len(dataset) - 1 if args.test_sep_len == -1 else args.test_sep_len
+
+#     for i in range(max_len):
+#         lh_count = min(random.randint(7, 10), len(dataset[i]))
+#         rh_count = min(random.randint(7, 10), len(dataset[i+1]))
+#         lh_doc = dataset[i][:lh_count]
+#         rh_doc = dataset[i+1][:rh_count]
+#         gt = lh_count - 1
+
+#         src_doc = lh_doc + rh_doc
+#         mixed_doc_set.append((src_doc, gt))
+    
+#     fin_dataset = []
+#     for idx, (d, _gt) in enumerate(mixed_doc_set):
+#         source, tgt = d, ''
+#         sent_labels = ''
+#         src_subtoken_idxs, segments_ids, cls_ids, src_txt = bert.preprocess(source,
+#                                                                             use_bert_basic_tokenizer=args.use_bert_basic_tokenizer,
+#                                                                             is_test=False)
+#         data_dict = {'src': src_subtoken_idxs,
+#                     'segs': segments_ids,
+#                     'clss': cls_ids,
+#                     'src_txt': src_txt,
+#                     'sep_gt': _gt}
+#         fin_dataset.append(data_dict)
+
+#     random.shuffle(fin_dataset)
+#     return fin_dataset
