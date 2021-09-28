@@ -1,7 +1,5 @@
 import gc
 from glob import glob
-import hashlib
-import itertools
 import json
 import os
 import random
@@ -15,15 +13,11 @@ from multiprocess import Pool
 
 from others.logging import logger
 from others.tokenization import BertTokenizer
-from pytorch_transformers import XLNetTokenizer
+#from pytorch_transformers import XLNetTokenizer
 
 from others.utils import clean
-from prepro.utils import _get_word_ngrams
-
-import xml.etree.ElementTree as ET
 
 nyt_remove_words = ["photo", "graph", "chart", "map", "table", "drawing"]
-
 
 def recover_from_corenlp(s):
     s = re.sub(r' \'{\w}', '\'\g<1>', s)
@@ -52,59 +46,6 @@ def load_json(p, lower):
 def load_pt(pth):
     loaded = torch.load(pth)
     return loaded
-
-
-def load_xml(p):
-    tree = ET.parse(p)
-    root = tree.getroot()
-    title, byline, abs, paras = [], [], [], []
-    title_node = list(root.iter('hedline'))
-    if (len(title_node) > 0):
-        try:
-            title = [p.text.lower().split() for p in list(title_node[0].iter('hl1'))][0]
-        except:
-            print(p)
-
-    else:
-        return None, None
-    byline_node = list(root.iter('byline'))
-    byline_node = [n for n in byline_node if n.attrib['class'] == 'normalized_byline']
-    if (len(byline_node) > 0):
-        byline = byline_node[0].text.lower().split()
-    abs_node = list(root.iter('abstract'))
-    if (len(abs_node) > 0):
-        try:
-            abs = [p.text.lower().split() for p in list(abs_node[0].iter('p'))][0]
-        except:
-            print(p)
-
-    else:
-        return None, None
-    abs = ' '.join(abs).split(';')
-    abs[-1] = abs[-1].replace('(m)', '')
-    abs[-1] = abs[-1].replace('(s)', '')
-
-    for ww in nyt_remove_words:
-        abs[-1] = abs[-1].replace('(' + ww + ')', '')
-    abs = [p.split() for p in abs]
-    abs = [p for p in abs if len(p) > 2]
-
-    for doc_node in root.iter('block'):
-        att = doc_node.get('class')
-        # if(att == 'abstract'):
-        #     abs = [p.text for p in list(f.iter('p'))]
-        if (att == 'full_text'):
-            paras = [p.text.lower().split() for p in list(doc_node.iter('p'))]
-            break
-    if (len(paras) > 0):
-        if (len(byline) > 0):
-            paras = [title + ['[unused3]'] + byline + ['[unused4]']] + paras
-        else:
-            paras = [title + ['[unused3]']] + paras
-
-        return paras, abs
-    else:
-        return None, None
 
 
 def divide_dataset(args, tot_len):
@@ -144,34 +85,6 @@ def tokenize(args):
             "The tokenized stories directory %s contains %i files, but it should contain the same number as %s (which has %i files). Was there an error during tokenization?" % (
                 tokenized_stories_dir, num_tokenized, stories_dir, num_orig))
     print("Successfully finished tokenizing %s to %s.\n" % (stories_dir, tokenized_stories_dir))
-
-
-def cal_rouge(evaluated_ngrams, reference_ngrams):
-    reference_count = len(reference_ngrams)
-    evaluated_count = len(evaluated_ngrams)
-
-    overlapping_ngrams = evaluated_ngrams.intersection(reference_ngrams)
-    overlapping_count = len(overlapping_ngrams)
-
-    if evaluated_count == 0:
-        precision = 0.0
-    else:
-        precision = overlapping_count / evaluated_count
-
-    if reference_count == 0:
-        recall = 0.0
-    else:
-        recall = overlapping_count / reference_count
-
-    f1_score = 2.0 * ((precision * recall) / (precision + recall + 1e-8))
-    return {"f": f1_score, "p": precision, "r": recall}
-
-
-def hashhex(s):
-    """Returns a heximal formated SHA1 hash of the input string."""
-    h = hashlib.sha1()
-    h.update(s.encode('utf-8'))
-    return h.hexdigest()
 
 
 class BertData():
@@ -241,13 +154,8 @@ def generate_sepdata(args):
                                 dataset=data_list,
                                 y_ratio=args.y_ratio,
                                 use_stair=args.use_stair,
-                                random_point=args.random_point)
-
-        # if corpus == 'test':
-        #     logger.info("Generating dataset for measuring separation accuracy.")
-        #     sep_dataset = _make_sepdata(args, data_list)
-        #     sep_save_pth = os.path.join(args.dataset_path, args.data_type, f'bertsep_data/bertsep_dt_sep.pt')
-        #     torch.save(sep_dataset, sep_save_pth)
+                                random_point=args.random_point,
+                                corpus_type=corpus)
 
         logger.info("Done.")
 
@@ -262,11 +170,13 @@ def generate_sepdata(args):
     gc.collect()
 
 
-def _make_data(args, dataset, y_ratio=0.5, use_stair=True, random_point=False):
+def _make_data(args, dataset, y_ratio=0.5, use_stair=True, random_point=False, corpus_type=''):
     '''
     For given dataset(list), split them into y/n datasets and generate final dataset used for training.
     '''
     ws = args.window_size
+    y_ratio = 0.5 if corpus_type in ['valid', 'test'] else y_ratio
+    
     tot_len = dataset.__len__()
     y_len = int(tot_len * y_ratio)
     n_len = tot_len - y_len
@@ -294,8 +204,8 @@ def _make_data(args, dataset, y_ratio=0.5, use_stair=True, random_point=False):
     if use_stair and ws > 1:
             stair_idx = 0
             count_idx = 0
-            stair_lh = [(a, ws * 2 - a) for a in list(range(1, ws))]
-            stair_rh = [(a, b) if a > b else (b, a) for (a, b) in stair_lh]
+            stair_lh = [(s, ws * 2 - s) for s in range(1, ws)]
+            stair_rh = [(ls, rs) if ls > rs else (rs, ls) for (ls, rs) in stair_lh]
             stairs = stair_lh + stair_rh
             single_num = n_len // (len(stairs) + 1) # average number of dataset per each stair
 
@@ -305,6 +215,7 @@ def _make_data(args, dataset, y_ratio=0.5, use_stair=True, random_point=False):
             tmp_article_n = n_cands[j][si:si + ws * 2]
             n_dataset.append(tmp_article_n) # append
         else:
+            # !!TODO!! 여기 잘못만듦 random인 경우 n_cands[j+1]의 시작점도 따로 샘플링 해야됨
             if stair_idx <= (len(stairs) - 1):
                 tmp_article_n = n_cands[j][si:si + stairs[stair_idx][0]] + n_cands[j+1][si:si + stairs[stair_idx][1]]
                 n_dataset.append(tmp_article_n) # append
@@ -320,11 +231,10 @@ def _make_data(args, dataset, y_ratio=0.5, use_stair=True, random_point=False):
     fin_dataset = []
     # !!TODO!! bert.preprocess 부분 imap 추가
     for lab_idx, _set in enumerate([n_dataset, y_dataset]):
-        for d in _set:
-            source, tgt = d, ''
-            sent_labels = ''
-            # if (args.lower):
-            #     source = [' '.join(s).lower().split() for s in source]
+        for source in _set:
+            if (args.lower):
+                source = [s.lower() for s in source]
+                
             src_subtoken_idxs, segments_ids, cls_ids, src_txt = bert.preprocess(source,
                                                                                 use_bert_basic_tokenizer=args.use_bert_basic_tokenizer,
                                                                                 is_test=False)
@@ -344,7 +254,7 @@ def generate_basedata(args):
     From tokenized .json format documents,
     create list type articles which 
     '''
-    target_dir = os.path.join(args.dataset_path, 'cnndm/tokenized_texts')
+    target_dir = os.path.join(args.dataset_path, f'{args.data_type}/tokenized_texts')
     files = [f for f in glob(os.path.join(target_dir, '*.json'))]
 
     a_lst = [(f, args) for f in files]
@@ -360,15 +270,23 @@ def generate_basedata(args):
     pool.join()
 
     # Clean documents
-    #    1. remove sentences with less than 30 characters
-    #    2. remove articles with less than 10 sentences
     def _clean_doc(documents):
+        # remove beginning sign, e.g. (cnn) at the very beginning of an article if exists.
+        # They might induce bias into the model
+        # other than obvious beggining sign of an article can be removed using min_src_ntokens_per_sent
         clean_set = []
         for doc in documents:
-            # remove (cnn) at the very beginning of an article, if exists.
-            # They might induce bias into the model
-            if ''.join(doc[0][:3]) == '(cnn)':
-                doc[0] = doc[0][3:]
+            if not doc:
+                continue
+            
+            if args.data_type == 'cnndm':
+                # remove divider(--)
+                if '--' in doc[0]:
+                    cut_index = doc[0].index('--')
+                    doc[0] = doc[0][cut_index + 1:]
+                    
+                if '(cnn)' in ''.join(doc[0]):
+                    doc[0] = ' '.join(doc[0]).replace('( cnn )', '').strip().split(' ')
 
             doc_clean = [sent for sent in doc if
                             (len(sent) >= args.min_src_ntokens_per_sent) # 10
@@ -381,20 +299,20 @@ def generate_basedata(args):
         return clean_set
 
     tmp_num = len(dataset)
-
-    import IPython
-    IPython.embed(); exit()
-
     dataset = _clean_doc(dataset)
     logger.info(f"Doc number after cleansing: {tmp_num} --> {len(dataset)}")
 
     # Divide into train/val/test
-    train_len, valid_len, _ = divide_dataset(args, len(dataset))
+    if args.test_only:
+        train_len, valid_len = 0, 0
+    else:
+        train_len, valid_len, _ = divide_dataset(args, len(dataset))
     
     random.shuffle(dataset)
     corpora = {'train': dataset[:train_len],
             'valid': dataset[train_len:train_len+valid_len],
             'test': dataset[train_len+valid_len:]}
+
     dataset = []
     gc.collect()
 
@@ -408,12 +326,6 @@ def _format_to_lines(params):
     f, args = params
     source = load_json(f, args.lower)
     return source
-
-
-
-
-
-
 
 
 

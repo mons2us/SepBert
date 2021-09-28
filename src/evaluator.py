@@ -11,9 +11,18 @@ from utils.data_loader import TextLoader
 from utils.reporter import ReportMgr, Statistics
 from others.logging import logger
 
+
+def csv_writer(args, step, acc_value, avg_sep):
+    #model_index = args.test_from.split('/')[1].split('_')[-1]
+    save_dir = '/'.join(args.test_from.split('/')[:2])
+    #save_dir = os.path.join(args.model_path, f'index_{model_index}')
+    file_path = os.path.join(save_dir, f'sep_result.csv')
+    with open(file_path, 'a') as f:
+        f.write(f"{step},{acc_value},{avg_sep}\n")
+
+
 def build_evaluator(args, device_id, model):
     n_gpu = args.world_size
-
     if device_id >= 0:
         gpu_rank = int(args.gpu_ranks[device_id])
     else:
@@ -23,7 +32,7 @@ def build_evaluator(args, device_id, model):
     tensorboard_log_dir = args.model_path
     writer = SummaryWriter(tensorboard_log_dir, comment="Unmt")
     report_manager = ReportMgr(args.report_every, start_time=-1, tensorboard_writer=writer)
-    evaluator = Evaluator(args, model, n_gpu, gpu_rank, report_manager)
+    evaluator = Evaluator(args, model, n_gpu, gpu_rank, report_manager=report_manager)
     return evaluator
 
 
@@ -54,7 +63,7 @@ class Evaluator:
         # to eval mode
         self.model.eval()
 
-    def test_cls(self, test_iter_fct=None):
+    def cls_eval(self, test_iter_fct=None):
         assert test_iter_fct
         logger.info("Evaluation: Classification Starts.")
         args = self.args
@@ -74,7 +83,7 @@ class Evaluator:
 
                 sep_pred = self.model(src, segs, clss, mask, mask_cls)
                 test_loss = self.loss(sep_pred, sep_label.float())
-                test_n_correct = (sep_label == (sep_pred > 0)).sum().to('cpu').item()
+                test_n_correct = (sep_label == (sep_pred > self.args.threshold)).sum().to('cpu').item()
                 
                 test_batch_stats = Statistics(float(test_loss.detach().to('cpu').numpy()), test_norm, test_n_correct)
                 test_stats.update(test_batch_stats)
@@ -83,25 +92,14 @@ class Evaluator:
                 test_norm = 0
             self._report_step(0, 0, valid_stats=test_stats)
 
-    def _report_step(self, learning_rate, step, train_stats=None,
-                    valid_stats=None):
+    def _report_step(self, learning_rate, step, train_stats=None, valid_stats=None):
         """
         Simple function to report stats (if report_manager is set)
         see `onmt.utils.ReportManagerBase.report_step` for doc
         """
         if self.report_manager is not None:
             return self.report_manager.report_step(
-                learning_rate, step, train_stats=train_stats,
-                valid_stats=valid_stats)
-
-    # def test_sep(self):
-    #     args = self.args
-    #     dataset_pth = os.path.join(args.dataset_path, args.data_type, f'bertsep_data/bertsep_dt_sep.pt')
-    #     test_dataset = torch.load(dataset_pth)
-
-    # def _test_sep_single_doc(self):
-    #     pass
-
+                learning_rate, step, train_stats=train_stats, valid_stats=valid_stats)
 
 
 # !!TODO!! 문서가 3개 이상인 경우도 추가
@@ -115,7 +113,7 @@ class SepEvaluator:
         self.text_loader = TextLoader(args, device)
         self.model = model
 
-    def eval(self):
+    def sep_eval(self):
         args = self.args
         max_mode = args.test_max_mode
 
@@ -125,11 +123,12 @@ class SepEvaluator:
             os.remove(save_pth)
 
         def _separate(scores, max_mode='max_all'):
+            scores = torch.sigmoid(torch.from_numpy(scores))
             if max_mode == 'max_all':
-                sep_point = np.argmax(scores) if max(scores) > 0 else -1e9
+                sep_point = torch.argmax(scores) if max(scores) > args.threshold else -1e9
                 return sep_point, None
             elif max_mode == 'max_one':
-                sep_point = np.where(scores > 0)[0]
+                sep_point = torch.where((scores > args.threshold) & (scores != 0.5))[0]
                 count_max = len(sep_point)
                 sep_point = -1e9 if len(sep_point) != 1 else sep_point
                 return sep_point, count_max
@@ -138,7 +137,7 @@ class SepEvaluator:
         mixed_doc_set = self.load_dataset()
 
         acc_cnt, err_cnt = 0, 0
-        count_max = 0
+        count_max = 0   
         for idx, (d, _gt) in tqdm(enumerate(mixed_doc_set), total=len(mixed_doc_set)):
             scores = np.zeros(len(d) - 1)
             offset = ws - 1
@@ -155,32 +154,55 @@ class SepEvaluator:
                 err_cnt += 1
                 self.print_result(save_pth, d, scores, False)
 
+        acc = acc_cnt/(acc_cnt+err_cnt)*100
+        avg_sep = count_max/(acc_cnt+err_cnt)
+
         if max_mode == 'max_all':
-            print(f"Evaluation Result: {acc_cnt/(acc_cnt+err_cnt)*100:.2f}%")
+            print(f"Evaluation Result: {acc:.2f}%")
         elif max_mode == 'max_one':
-            print(f"Evaluation Result: {acc_cnt/(acc_cnt+err_cnt)*100:.2f}%  Average Sep Points: {count_max/(acc_cnt+err_cnt):.2f}")
+            print(f"Evaluation Result: {acc:.2f}%  Average Sep Points: {avg_sep:.2f}")
         
+        # write into .csv file
+        csv_writer(args, args.test_from, acc, avg_sep)
 
     def load_dataset(self):
         args = self.args
-        dataset = [data['src_txt'] for data in torch.load('dataset/cnndm/bert_data/test_articles.pt')]
+        #dataset = [d['src_txt'] for d in torch.load('dataset/cnndm/bert_data/test_dataset.pt')]
+        dataset = torch.load(f'dataset/{args.data_type}/bert_data/test_dataset.pt')
         dataset = self._make_sepdata(dataset)
         return dataset
-
 
     def _make_sepdata(self, dataset):
         '''
         generate mixed documents for given list of cleaned data
         '''
         args = self.args
+        ws = args.window_size
 
         mixed_doc_set = []
-        assert args.test_sep_len < len(dataset)
-        max_len = len(dataset) - 1 if args.test_sep_len == -1 else args.test_sep_len
+        assert args.test_sep_num < len(dataset)
+        max_num = len(dataset) - 1 if args.test_sep_num == -1 else args.test_sep_num
 
-        for i in range(max_len):
-            lh_count = min(random.randint(7, 10), len(dataset[i]))
-            rh_count = min(random.randint(7, 10), len(dataset[i+1]))
+        for i in range(max_num):
+            '''
+            # of possible sep points: Total Length - (window size * 2) + 1 (e.g. 15 when tot_length = 20 and ws = 3)
+            To make sep accuracy per window size balanced on its evaluation,
+            length of a mixed article is set as;
+                Total Length: 20 + (ws * 2)
+                therefore the # of sep points are the same for all possible window sizes (= 21 for most cases)
+                articles with less length than tot_len are just added so.
+            '''
+            
+            # lh_count = min(random.randint(7, 10), len(dataset[i]))
+            # rh_count = min(random.randint(7, 10), len(dataset[i+1]))
+            # lh_doc = dataset[i][:lh_count]
+            # rh_doc = dataset[i+1][:rh_count]
+            # gt = lh_count - 1
+            
+            side_len = 10 + ws
+            lh_count = min(side_len, len(dataset[i]))
+            rh_count = min(side_len, len(dataset[i+1]))
+
             lh_doc = dataset[i][:lh_count]
             rh_doc = dataset[i+1][:rh_count]
             gt = lh_count - 1
@@ -190,7 +212,6 @@ class SepEvaluator:
         
         return mixed_doc_set
     
-
     def eval_single_doc(self, doc, gt):
         '''
         for a given mixed document,
@@ -210,21 +231,15 @@ class SepEvaluator:
 
         return np.array(logits)
 
-
     def print_result(self, pth, doc, scores, flag):
         to_print = [0] * (len(doc) * 2 - 1)
         to_print[::2] = list(doc)
         to_print[1::2] = list(map(str, scores))
 
-        prob_crit = 0.8 if flag else 0.3
+        prob_crit = 0.1 if flag else 0.05
         if random.random() > prob_crit:
             flag_text = '[CORRECT PREDICTION]\n' if flag else '[WRONG PREDICTION]\n'
             with open(pth, 'a') as file:
                 file.write(flag_text)
                 file.write('\n'.join(to_print))
                 file.write('\n'*4)
-
-
-
-
-

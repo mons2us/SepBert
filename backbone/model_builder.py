@@ -5,13 +5,13 @@ import torch.nn as nn
 from pytorch_transformers import BertModel, BertConfig
 from torch.nn.init import xavier_uniform_
 
+from others.logging import logger
 #from decoder import TransformerDecoder
 from backbone.bertsep import Classifier, SepTransformerEncoder
 from backbone.optimizers import Optimizer
 
 def build_optim(args, model, checkpoint):
     """ Build optimizer """
-
     if checkpoint is not None:
         optim = checkpoint['optim'][0]
         saved_optimizer_state_dict = optim.optimizer.state_dict()
@@ -26,7 +26,6 @@ def build_optim(args, model, checkpoint):
             raise RuntimeError(
                 "Error: loaded Adam optimizer from existing model" +
                 " but optimizer state is empty")
-
     else:
         optim = Optimizer(
             args.optim, args.lr, args.max_grad_norm,
@@ -54,7 +53,6 @@ def build_optim_bert(args, model, checkpoint):
             raise RuntimeError(
                 "Error: loaded Adam optimizer from existing model" +
                 " but optimizer state is empty")
-
     else:
         optim = Optimizer(
             args.optim, args.lr_bert, args.max_grad_norm,
@@ -64,12 +62,10 @@ def build_optim_bert(args, model, checkpoint):
 
     params = [(n, p) for n, p in list(model.named_parameters()) if n.startswith('bert.model')]
     optim.set_parameters(params)
-
     return optim
 
 def build_optim_dec(args, model, checkpoint):
     """ Build optimizer """
-
     if checkpoint is not None:
         optim = checkpoint['optims'][1]
         saved_optimizer_state_dict = optim.optimizer.state_dict()
@@ -84,7 +80,6 @@ def build_optim_dec(args, model, checkpoint):
             raise RuntimeError(
                 "Error: loaded Adam optimizer from existing model" +
                 " but optimizer state is empty")
-
     else:
         optim = Optimizer(
             args.optim, args.lr_dec, args.max_grad_norm,
@@ -94,30 +89,43 @@ def build_optim_dec(args, model, checkpoint):
 
     params = [(n, p) for n, p in list(model.named_parameters()) if not n.startswith('bert.model')]
     optim.set_parameters(params)
-
     return optim
 
 
-def get_generator(vocab_size, dec_hidden_size, device):
-    gen_func = nn.LogSoftmax(dim=-1)
-    generator = nn.Sequential(
-        nn.Linear(dec_hidden_size, vocab_size),
-        gen_func
-    )
-    generator.to(device)
+# def get_generator(vocab_size, dec_hidden_size, device):
+#     gen_func = nn.LogSoftmax(dim=-1)
+#     generator = nn.Sequential(
+#         nn.Linear(dec_hidden_size, vocab_size),
+#         gen_func
+#     )
+#     generator.to(device)
 
-    return generator
+#     return generator
 
 class Bert(nn.Module):
-    def __init__(self, large, temp_dir, finetune=True):
+    def __init__(self, args):
         super(Bert, self).__init__()
-        if(large):
+        temp_dir = args.temp_dir
+        if args.large:
             self.model = BertModel.from_pretrained('bert-large-uncased', cache_dir=temp_dir)
         else:
             self.model = BertModel.from_pretrained('bert-base-uncased', cache_dir=temp_dir)
-        self._load_bertsum_weight()
-        print("after:", self.model.state_dict()['encoder.layer.0.attention.self.query.weight'])
-        self.finetune = finetune
+        
+        # Load bertsum weight
+        # if mode is test or backbone used is BERT, there's no need to load bertsum weights
+        if args.mode == 'train' and args.backbone_type == 'bertsum':
+            logger.info("Using BertSum weights ---> loading the weights")
+            self._load_bertsum_weight()
+        else:
+            logger.info("Not Using BertSum weights")
+            
+        # whether finetune the backbone(bert or bertsum)
+        self.finetune = args.finetune_bert
+        if args.mode == 'train':
+            if self.finetune:
+                logger.info(f"Finetuning {args.backbone_type}")
+            else:
+                logger.info(f"Not finetuning backbone({args.backbone_type})")
 
     def _load_bertsum_weight(self):
         bertsum_weight = torch.load('models/bertsum_model_best.pt')
@@ -129,7 +137,8 @@ class Bert(nn.Module):
         bertsum_dict = {k.split('bert.model.')[-1]: v for k, v in bertsum_dict.items() if k.split('bert.model.')[-1] in bert_dict}
         bert_dict.update(bertsum_dict)
         self.model.load_state_dict(bert_dict)
-        print("Bertsum weights loaded.")
+        print("BertSum weights loaded.")
+        print("after:", self.model.state_dict()['encoder.layer.0.attention.self.query.weight'])
         return
 
     def forward(self, x, segs, mask):
@@ -147,9 +156,14 @@ class BertSeparator(nn.Module):
         super(BertSeparator, self).__init__()
         self.args = args
         self.device = device
-        self.bert = Bert(args.large, args.temp_dir, args.finetune_bert)
-        self.sep_layer = SepTransformerEncoder(self.bert.model.config.hidden_size, args.ext_ff_size, args.ext_heads,
-                                            args.ext_dropout, args.ext_layers)
+        # self.bert = Bert(args.large, args.temp_dir, args.finetune_bert)
+        self.bert = Bert(args)
+        
+        if args.add_transformer:
+            logger.info(f"Using Transformer Layer: Bert --> [Transformer * {args.ext_layers}] --> Classifier")
+            self.sep_layer = SepTransformerEncoder(self.bert.model.config.hidden_size, args.ext_ff_size, args.ext_heads, args.ext_dropout, args.ext_layers)
+        else:
+            logger.info(f"Not Using Transformer Layer: Bert --> (No Transformer) --> Classifier")
         self.classifier = Classifier(args.window_size)
 
         # if (args.encoder == 'baseline'):
@@ -166,22 +180,25 @@ class BertSeparator(nn.Module):
 
         if checkpoint is not None:
             self.load_state_dict(checkpoint['model'], strict=True)
+            logger.info("Checkpoint loaded on the model.")
         else:
-            if args.param_init != 0.0:
-                for p in self.sep_layer.parameters():
-                    p.data.uniform_(-args.param_init, args.param_init)
-            if args.param_init_glorot:
-                for p in self.sep_layer.parameters():
-                    if p.dim() > 1:
-                        xavier_uniform_(p)
+            if args.add_transformer:
+                if args.param_init != 0.0:
+                    for p in self.sep_layer.parameters():
+                        p.data.uniform_(-args.param_init, args.param_init)
+                if args.param_init_glorot:
+                    for p in self.sep_layer.parameters():
+                        if p.dim() > 1:
+                            xavier_uniform_(p)
         self.to(device)
 
     def forward(self, src, segs, clss, mask_src, mask_cls):
         top_vec = self.bert(src, segs, mask_src)
         sents_vec = top_vec[torch.arange(top_vec.size(0)).unsqueeze(1), clss]
         sents_vec = sents_vec * mask_cls[:, :, None].float()
-        out_vec = self.sep_layer(sents_vec, mask_cls).squeeze(-1)
-        classified = self.classifier(out_vec)
+        if self.args.add_transformer:
+            sents_vec = self.sep_layer(sents_vec, mask_cls).squeeze(-1)
+        classified = self.classifier(sents_vec)
         return classified
 
 # class AbsSummarizer(nn.Module):

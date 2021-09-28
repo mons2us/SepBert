@@ -190,7 +190,6 @@ class Optimizer(object):
                 self.original_lr *
                  min(self._step ** (-0.5),
                      self._step * self.warmup_steps**(-1.5)))
-
         else:
             if ((self.start_decay_steps is not None) and (self._step >= self.start_decay_steps)):
                 self.start_decay = True

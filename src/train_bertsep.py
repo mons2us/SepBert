@@ -118,7 +118,8 @@ def train_sep(args, device_id):
     train_single_sep(args, device_id)
 
 def train_single_sep(args, device_id):
-    init_logger(args.log_file)
+    logger_pth = os.path.join(args.log_dir, '_'.join(time.asctime().split()) + '.log')
+    init_logger(logger_pth)
 
     # device
     device = "cpu" if args.visible_gpus == '-1' else "cuda"
@@ -168,7 +169,9 @@ def train_single_sep(args, device_id):
 
 
 def test(args, device_id):
-    init_logger(args.log_file)
+    logger_pth = os.path.join(args.log_dir, '_'.join(time.asctime().split()) + '.log')
+    init_logger(logger_pth)
+    
     assert args.test_from
     device = "cpu" if args.visible_gpus == '-1' else "cuda"
     
@@ -188,10 +191,10 @@ def test(args, device_id):
     # Evaluation mode    
     if args.test_mode == 'cls':
         evaluator = build_evaluator(args, device_id, model)
-        evaluator.test_cls(test_iter_fct)
+        evaluator.cls_eval(test_iter_fct)
     elif args.test_mode == 'sep':
         evaluator = build_sep_evaluator(args, device_id, model)
-        evaluator.eval()
+        evaluator.sep_eval()
     
 
 

@@ -132,6 +132,7 @@ dmypy.json
 dataset/*
 
 # model (.pt files)
+models/*/*.pt
 models/*.pt
 models/events.out.tfevents*
 

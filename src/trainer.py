@@ -28,7 +28,6 @@ def build_trainer(args, device_id, model, optim):
         model_saver(:obj:`onmt.models.ModelSaverBase`): the utility object
             used to save the model
     """
-
     grad_accum_count = args.accum_count
     n_gpu = args.world_size # number of available gpus
 
@@ -40,13 +39,13 @@ def build_trainer(args, device_id, model, optim):
 
     print('gpu_rank %d' % gpu_rank)
 
-    tensorboard_log_dir = args.model_path
+    tensorboard_log_dir = os.path.join(args.model_path, f'index_{args.model_index}')
     writer = SummaryWriter(tensorboard_log_dir, comment="Unmt")
     report_manager = ReportMgr(args.report_every, start_time=-1, tensorboard_writer=writer)
     trainer = Trainer(args, model, optim, grad_accum_count, n_gpu, gpu_rank, report_manager)
 
     # print total number of params
-    if (model):
+    if model:
         n_params = _tally_parameters(model)
         logger.info('* number of parameters: %d' % n_params)
 
@@ -78,7 +77,6 @@ class Trainer(object):
     """
 
     def __init__(self, args, model, optim, grad_accum_count=1, n_gpu=1, gpu_rank=1, report_manager=None):
-
         # Basic attributes.
         self.args = args
         self.save_checkpoint_steps = args.save_checkpoint_steps
@@ -93,7 +91,7 @@ class Trainer(object):
         assert grad_accum_count > 0
 
         # Set model in training mode.
-        if (model):
+        if model:
             self.model.train()
 
     def train(self, train_iter_fct, train_steps, valid_iter_fct=None, valid_steps=-1):
@@ -114,8 +112,17 @@ class Trainer(object):
         Return:
             None
         """
-        logger.info('Start training...')
+        logger.info("Start training...")
         args = self.args
+
+        # Set save directory
+        save_dir = os.path.join(self.args.model_path, f'index_{self.args.model_index}')
+        # if not os.path.exists(save_dir):
+        #     logger.info(f"Making save directory at: {save_dir}")
+        #     os.makedirs(save_dir)
+        # else:
+        #     logger.info(f"Model path: {save_dir} already exists. Please check before training new model.")
+        setattr(self, 'save_dir', save_dir)
 
         # step =  self.optim._step + 1
         step = self.optim._step + 1
@@ -272,11 +279,9 @@ class Trainer(object):
             'optim': self.optim,
         }
         random_flag = 'random' if self.args.random_point else 'fixed'
-        checkpoint_path = os.path.join(self.args.model_path,
-                                    f'model_w{self.args.window_size}_{random_flag}_step_{str(step).zfill(5)}.pt')
-                                    
+        checkpoint_path = os.path.join(self.save_dir, f'model_w{self.args.window_size}_{random_flag}_step_{str(step).zfill(5)}.pt')
         logger.info("Saving checkpoint %s" % checkpoint_path)
-        if (not os.path.exists(checkpoint_path)):
+        if not os.path.exists(checkpoint_path):
             torch.save(checkpoint, checkpoint_path)
             return checkpoint, checkpoint_path
 
@@ -311,11 +316,9 @@ class Trainer(object):
         """
         if self.report_manager is not None:
             return self.report_manager.report_training(
-                step, num_steps, learning_rate, report_stats,
-                multigpu=self.n_gpu > 1)
+                step, num_steps, learning_rate, report_stats, multigpu=self.n_gpu > 1)
 
-    def _report_step(self, learning_rate, step, train_stats=None,
-                    valid_stats=None):
+    def _report_step(self, learning_rate, step, train_stats=None, valid_stats=None):
         """
         Simple function to report stats (if report_manager is set)
         see `onmt.utils.ReportManagerBase.report_step` for doc
@@ -332,124 +335,124 @@ class Trainer(object):
         if self.model_saver is not None:
             self.model_saver.maybe_save(step)
 
-    def test(self, test_iter, step, cal_lead=False, cal_oracle=False, return_results=False):
-        """ Validate model.
-            valid_iter: validate data iterator
-        Returns:
-            :obj:`nmt.Statistics`: validation loss statistics
-        """
+    # def test(self, test_iter, step, cal_lead=False, cal_oracle=False, return_results=False):
+    #     """ Validate model.
+    #         valid_iter: validate data iterator
+    #     Returns:
+    #         :obj:`nmt.Statistics`: validation loss statistics
+    #     """
 
-        # Set model in validating mode.
-        def _get_ngrams(n, text):
-            ngram_set = set()
-            text_length = len(text)
-            max_index_ngram_start = text_length - n
-            for i in range(max_index_ngram_start + 1):
-                ngram_set.add(tuple(text[i:i + n]))
-            return ngram_set
+    #     # Set model in validating mode.
+    #     def _get_ngrams(n, text):
+    #         ngram_set = set()
+    #         text_length = len(text)
+    #         max_index_ngram_start = text_length - n
+    #         for i in range(max_index_ngram_start + 1):
+    #             ngram_set.add(tuple(text[i:i + n]))
+    #         return ngram_set
 
-        def _block_tri(c, p):
-            tri_c = _get_ngrams(3, c.split())
-            for s in p:
-                tri_s = _get_ngrams(3, s.split())
-                if len(tri_c.intersection(tri_s)) > 0:
-                    return True
-            return False
+    #     def _block_tri(c, p):
+    #         tri_c = _get_ngrams(3, c.split())
+    #         for s in p:
+    #             tri_s = _get_ngrams(3, s.split())
+    #             if len(tri_c.intersection(tri_s)) > 0:
+    #                 return True
+    #         return False
 
-        if (not cal_lead and not cal_oracle):
-            self.model.eval()
-        stats = Statistics()
-        oris = []
-        can_path = '%s_step%d.candidate' % (self.args.result_path, step)
-        gold_path = '%s_step%d.gold' % (self.args.result_path, step)
-        with open(can_path, 'w') as save_pred:
-            with open(gold_path, 'w') as save_gold:
-                with torch.no_grad():
-                    for batch in test_iter:
-                        src = batch.src
-                        if not return_results:
-                            labels = batch.src_sent_labels
-                        segs = batch.segs
-                        clss = batch.clss
-                        mask = batch.mask_src
-                        mask_cls = batch.mask_cls
+    #     if (not cal_lead and not cal_oracle):
+    #         self.model.eval()
+    #     stats = Statistics()
+    #     oris = []
+    #     can_path = '%s_step%d.candidate' % (self.args.result_path, step)
+    #     gold_path = '%s_step%d.gold' % (self.args.result_path, step)
+    #     with open(can_path, 'w') as save_pred:
+    #         with open(gold_path, 'w') as save_gold:
+    #             with torch.no_grad():
+    #                 for batch in test_iter:
+    #                     src = batch.src
+    #                     if not return_results:
+    #                         labels = batch.src_sent_labels
+    #                     segs = batch.segs
+    #                     clss = batch.clss
+    #                     mask = batch.mask_src
+    #                     mask_cls = batch.mask_cls
 
-                        gold = []
-                        pred = []
-                        ori = [] # 원본 문장을 담을 list
-                        idcs = []
+    #                     gold = []
+    #                     pred = []
+    #                     ori = [] # 원본 문장을 담을 list
+    #                     idcs = []
 
-                        if cal_lead:
-                            selected_ids = [list(range(batch.clss.size(1)))] * batch.batch_size
-                        elif cal_oracle:
-                            selected_ids = [[j for j in range(batch.clss.size(1)) if labels[i][j] == 1] for i in range(batch.batch_size)]
-                        else:
-                            sents_vec, sent_scores, mask = self.model(src, segs, clss, mask, mask_cls)
+    #                     if cal_lead:
+    #                         selected_ids = [list(range(batch.clss.size(1)))] * batch.batch_size
+    #                     elif cal_oracle:
+    #                         selected_ids = [[j for j in range(batch.clss.size(1)) if labels[i][j] == 1] for i in range(batch.batch_size)]
+    #                     else:
+    #                         sents_vec, sent_scores, mask = self.model(src, segs, clss, mask, mask_cls)
 
-                            if not return_results:
-                                loss = self.loss(sent_scores, labels.float())
-                                loss = (loss * mask.float()).sum()
-                                batch_stats = Statistics(float(loss.cpu().data.numpy()), len(labels))
-                                stats.update(batch_stats)
+    #                         if not return_results:
+    #                             loss = self.loss(sent_scores, labels.float())
+    #                             loss = (loss * mask.float()).sum()
+    #                             batch_stats = Statistics(float(loss.cpu().data.numpy()), len(labels))
+    #                             stats.update(batch_stats)
                                 
-                            '''
-                            Token 제한 내 문장들에 대해 요약 score 저장 -> rank
-                            '''
-                            sent_scores = sent_scores + mask.float()
-                            sent_scores = sent_scores.cpu().data.numpy()
-                            selected_ids = np.argsort(-sent_scores, 1)
-                        # selected_ids = np.sort(selected_ids,1)
-                        '''
-                        i: selected_ids가 하나 이상의 블록으로 나올 수 있는지는 모르겠으나, 그냥 결과물임
-                        j: 결과물 중 실제로 
-                        '''
-                        for i, idx in enumerate(selected_ids):
-                            _pred = []
-                            _idcs = []
-                            _ori  = []
-                            if (len(batch.src_str[i]) == 0):
-                                continue
-                            for j in selected_ids[i][:len(batch.src_str[i])]:
-                                if (j >= len(batch.src_str[i])):
-                                    continue
-                                candidate = " ".join(batch.src_str[i][j]).strip()
-                                candidate_ori = batch.src_ori[j]
+    #                         '''
+    #                         Token 제한 내 문장들에 대해 요약 score 저장 -> rank
+    #                         '''
+    #                         sent_scores = sent_scores + mask.float()
+    #                         sent_scores = sent_scores.cpu().data.numpy()
+    #                         selected_ids = np.argsort(-sent_scores, 1)
+    #                     # selected_ids = np.sort(selected_ids,1)
+    #                     '''
+    #                     i: selected_ids가 하나 이상의 블록으로 나올 수 있는지는 모르겠으나, 그냥 결과물임
+    #                     j: 결과물 중 실제로 
+    #                     '''
+    #                     for i, idx in enumerate(selected_ids):
+    #                         _pred = []
+    #                         _idcs = []
+    #                         _ori  = []
+    #                         if (len(batch.src_str[i]) == 0):
+    #                             continue
+    #                         for j in selected_ids[i][:len(batch.src_str[i])]:
+    #                             if (j >= len(batch.src_str[i])):
+    #                                 continue
+    #                             candidate = " ".join(batch.src_str[i][j]).strip()
+    #                             candidate_ori = batch.src_ori[j]
                                 
-                                if (self.args.block_trigram):
-                                    if not _block_tri(candidate, _pred):
-                                        _pred.append(candidate)
-                                        _idcs.append(j)
-                                        _ori.append(candidate_ori)
-                                else:
-                                    _pred.append(candidate)
-                                    _idcs.append(j)
-                                    _ori.append(candidate_ori)
+    #                             if (self.args.block_trigram):
+    #                                 if not _block_tri(candidate, _pred):
+    #                                     _pred.append(candidate)
+    #                                     _idcs.append(j)
+    #                                     _ori.append(candidate_ori)
+    #                             else:
+    #                                 _pred.append(candidate)
+    #                                 _idcs.append(j)
+    #                                 _ori.append(candidate_ori)
                                     
 
-                                if ((not cal_oracle) and (not self.args.recall_eval) and len(_pred) == 3):
-                                    break
+    #                             if ((not cal_oracle) and (not self.args.recall_eval) and len(_pred) == 3):
+    #                                 break
 
-                            _pred = " ".join(_pred).replace(" ", "")
-                            _ori = " ".join(_ori)
-                            if (self.args.recall_eval):
-                                _pred = ' '.join(_pred.split()[:len(batch.tgt_str[i].split())])
+    #                         _pred = " ".join(_pred).replace(" ", "")
+    #                         _ori = " ".join(_ori)
+    #                         if (self.args.recall_eval):
+    #                             _pred = ' '.join(_pred.split()[:len(batch.tgt_str[i].split())])
 
-                            pred.append(_pred)
-                            idcs.append(_idcs)
-                            ori.append(_ori)
-                            gold.append(batch.tgt_str[i])
+    #                         pred.append(_pred)
+    #                         idcs.append(_idcs)
+    #                         ori.append(_ori)
+    #                         gold.append(batch.tgt_str[i])
 
-                        for i in range(len(gold)):
-                            save_gold.write(gold[i].strip() + '\n')
-                        for i in range(len(pred)):
-                            save_pred.write(pred[i].strip() + '\n')
-                        oris.append(ori[i])
+    #                     for i in range(len(gold)):
+    #                         save_gold.write(gold[i].strip() + '\n')
+    #                     for i in range(len(pred)):
+    #                         save_pred.write(pred[i].strip() + '\n')
+    #                     oris.append(ori[i])
                         
-                    if return_results:
-                        return sents_vec, oris, idcs
+    #                 if return_results:
+    #                     return sents_vec, oris, idcs
                             
-        if (step != -1 and self.args.report_rouge):
-            rouges = test_rouge(self.args.temp_dir, can_path, gold_path)
-            logger.info('Rouges at step %d \n%s' % (step, rouge_results_to_str(rouges)))
-        self._report_step(0, step, valid_stats=stats)
-        return stats
+    #     if (step != -1 and self.args.report_rouge):
+    #         rouges = test_rouge(self.args.temp_dir, can_path, gold_path)
+    #         logger.info('Rouges at step %d \n%s' % (step, rouge_results_to_str(rouges)))
+    #     self._report_step(0, step, valid_stats=stats)
+    #     return stats

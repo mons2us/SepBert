@@ -226,11 +226,9 @@ class DataIterator:
         for buffer in self.batch_buffer(data, self.batch_size * 300):
             p_batch = sorted(buffer, key=lambda x: len(x[2]))
             p_batch = self.batch(p_batch, self.batch_size) # ?
-
             p_batch = list(p_batch)
             if self.shuffle:
                 random.shuffle(p_batch)
-
             for b in p_batch:
                 if len(b) == 0:
                     continue
@@ -320,7 +318,6 @@ class TextLoader:
             x, x_org, src, mask_src, segments_ids, clss, mask_cls = _process_src(x) ## !!Edit!!
             segs = torch.tensor(segments_ids)[None, :].to(device)
             batch = src, segs, clss, mask_src, mask_cls
-            #self.model(src, segs, clss, mask, mask_cls)
             yield batch, x_org
 
     def _get_avg_token_num(self, args):

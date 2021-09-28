@@ -2,9 +2,7 @@
 from __future__ import absolute_import
 
 import logging
-
 logger = logging.getLogger()
-
 
 def init_logger(log_file=None, log_file_level=logging.NOTSET):
     log_format = logging.Formatter("[%(asctime)s %(levelname)s] %(message)s")

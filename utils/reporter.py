@@ -109,15 +109,13 @@ class ReportMgr(ReportMgrBase):
 
     def maybe_log_tensorboard(self, stats, prefix, learning_rate, step):
         if self.tensorboard_writer is not None:
-            stats.log_tensorboard(
-                prefix, self.tensorboard_writer, learning_rate, step)
+            stats.log_tensorboard(prefix, self.tensorboard_writer, learning_rate, step)
 
     def _report_training(self, step, num_steps, learning_rate, report_stats):
         """
         See base class method `ReportMgrBase.report_training`.
         """
-        report_stats.output(step, num_steps,
-                            learning_rate, self.start_time)
+        report_stats.output(step, num_steps, learning_rate, self.start_time)
 
         # Log the progress using the number of batches on the x-axis.
         self.maybe_log_tensorboard(report_stats,
@@ -136,19 +134,13 @@ class ReportMgr(ReportMgrBase):
             self.log('Train perplexity: %g' % train_stats.ppl())
             self.log('Train accuracy: %g' % train_stats.accuracy())
 
-            self.maybe_log_tensorboard(train_stats,
-                                        "train",
-                                        lr,
-                                        step)
+            self.maybe_log_tensorboard(train_stats, "train", lr, step)
 
         if valid_stats is not None:
             #self.log('Validation perplexity: %g' % valid_stats.ppl())
             self.log(f'Validation accuracy: {valid_stats.accuracy():.3f}%')
 
-            self.maybe_log_tensorboard(valid_stats,
-                                        "valid",
-                                        lr,
-                                        step)
+            self.maybe_log_tensorboard(valid_stats, "valid", lr, step)
 
 
 class Statistics(object):
