@@ -33,7 +33,6 @@ class PositionalEncoding(nn.Module):
         emb = emb * math.sqrt(self.dim)
         if (step):
             emb = emb + self.pe[:, step][:, None, :]
-
         else:
             emb = emb + self.pe[:, :emb.size(1)]
         emb = self.dropout(emb)
@@ -72,7 +71,7 @@ class SepTransformerEncoder(nn.Module):
         self.num_inter_layers = num_inter_layers
         self.pos_emb = PositionalEncoding(dropout, d_model)
         self.transformer_inter = nn.ModuleList(
-            [TransformerEncoderLayer(d_model, heads, d_ff, dropout) for _ in range(num_inter_layers)])
+            [TransformerEncoderLayer(d_model, heads, d_ffX, dropout) for _ in range(num_inter_layers)])
         self.dropout = nn.Dropout(dropout)
         self.layer_norm = nn.LayerNorm(d_model, eps=1e-6)
 

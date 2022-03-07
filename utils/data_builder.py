@@ -11,11 +11,32 @@ from tqdm import tqdm
 import torch
 from multiprocess import Pool
 
+import gluonnlp as nlp
+from kobert.utils import get_tokenizer, tokenizer
+from kobert.utils import download as _download
+from kobert.pytorch_kobert import get_pytorch_kobert_model
+from gluonnlp.data import SentencepieceTokenizer
+
 from others.logging import logger
 from others.tokenization import BertTokenizer
 #from pytorch_transformers import XLNetTokenizer
 
 from others.utils import clean
+
+
+def get_kobert_vocab(cachedir="./tmp/"):
+    # Add BOS,EOS vocab
+    vocab_info = tokenizer
+    vocab_file = _download(
+        vocab_info["url"], vocab_info["fname"], vocab_info["chksum"], cachedir=cachedir
+    )
+
+    vocab_b_obj = nlp.vocab.BERTVocab.from_sentencepiece(
+        vocab_file, padding_token="[PAD]", bos_token="[BOS]", eos_token="[EOS]"
+    )
+
+    return vocab_b_obj
+
 
 nyt_remove_words = ["photo", "graph", "chart", "map", "table", "drawing"]
 
@@ -87,35 +108,45 @@ def tokenize(args):
     print("Successfully finished tokenizing %s to %s.\n" % (stories_dir, tokenized_stories_dir))
 
 
-class BertData():
-    def __init__(self, args):
+class BertData:
+    def __init__(self, args, vocab, tokenizer):
         self.args = args
-        self.tokenizer = BertTokenizer.from_pretrained('bert-base-uncased', do_lower_case=True)
+        self.vocab = vocab
+        self.tokenizer = tokenizer
 
         self.sep_token = '[SEP]'
         self.cls_token = '[CLS]'
         self.pad_token = '[PAD]'
-        self.tgt_bos = '[unused0]'
-        self.tgt_eos = '[unused1]'
-        self.tgt_sent_split = '[unused2]'
-        self.sep_vid = self.tokenizer.vocab[self.sep_token]
-        self.cls_vid = self.tokenizer.vocab[self.cls_token]
-        self.pad_vid = self.tokenizer.vocab[self.pad_token]
 
-    def preprocess(self, src, use_bert_basic_tokenizer=False, is_test=False):
-        if ((not is_test) and len(src) == 0):
+        self.pad_idx = self.vocab["[PAD]"]
+        self.cls_idx = self.vocab["[CLS]"]
+        self.sep_idx = self.vocab["[SEP]"]
+        self.mask_idx = self.vocab["[MASK]"]
+        self.bos_idx = self.vocab["[BOS]"]
+        self.eos_idx = self.vocab["[EOS]"]
+
+    def preprocess(self, src, is_test=False):
+        if len(src) == 0:
             return None
 
-        idxs = [i for i, s in enumerate(src)]
+        idxs = [i for i, s in enumerate(src) if (len(s) > self.args.min_src_ntokens_per_sent)]
+
         src_txt = src
 
-        # add cls/sep tokens front and end
-        text = ' {} {} '.format(self.sep_token, self.cls_token).join(src_txt)
-        src_subtokens = self.tokenizer.tokenize(text)
-        src_subtokens = [self.cls_token] + src_subtokens + [self.sep_token]
-        src_subtoken_idxs = self.tokenizer.convert_tokens_to_ids(src_subtokens)
+        src = [src[i][: self.args.max_src_ntokens_per_sent] for i in idxs]
+        src = src[: self.args.max_src_nsents]        
+        src = [self.tokenizer(sent) for sent in src]
 
-        _segs = [-1] + [i for i, t in enumerate(src_subtoken_idxs) if t == self.sep_vid]
+        src_subtokens = [[self.cls_token] + sent + [self.sep_token] for sent in src]
+        # src_subtokens = ' {} {} '.format(self.sep_token, self.cls_token).join([self.tokenizer(sent) for sent in src])
+        # #src_subtokens = self.tokenizer(src)
+        # src_subtokens = [self.cls_token] + src_subtokens + [self.sep_token]
+
+        src_token_ids = [self.tokenizer.convert_tokens_to_ids(s) for s in src_subtokens]
+        #src_subtoken_idxs = [self.add_special_token(lines) for lines in src_token_ids]
+        src_subtoken_idxs = [lines for lines in src_token_ids]
+
+        _segs = [-1] + [i for i, t in enumerate(src_subtoken_idxs) if t == self.sep_idx]
         segs = [_segs[i] - _segs[i - 1] for i in range(1, len(_segs))]
         segments_ids = []
         for i, s in enumerate(segs):
@@ -123,9 +154,79 @@ class BertData():
                 segments_ids += s * [0]
             else:
                 segments_ids += s * [1]
-        cls_ids = [i for i, t in enumerate(src_subtoken_idxs) if t == self.cls_vid]
+        cls_ids = [i for i, t in enumerate(src_subtoken_idxs) if t == self.cls_idx]
 
+        segments_ids = self.get_token_type_ids(src_subtoken_idxs)
+
+        src_subtoken_idxs = [x for sublist in src_subtoken_idxs for x in sublist]
+        segments_ids = [x for sublist in segments_ids for x in sublist]
+
+        # tgt_subtoken_idxs = self.tokenizer.convert_tokens_to_ids(tgt)[: self.args.max_tgt_ntokens]
+        # tgt_subtoken_idxs = self.add_sentence_token(tgt_subtoken_idxs)
+
+        # if (not is_test) and len(tgt_subtoken_idxs) < self.args.min_tgt_ntokens:
+        #     return None
+
+        cls_ids = self.get_cls_index(src_subtoken_idxs)
         return src_subtoken_idxs, segments_ids, cls_ids, src_txt
+
+    def add_special_token(self, token_ids):
+        return [self.cls_idx] + token_ids + [self.sep_idx]
+
+    def add_sentence_token(self, token_ids):
+        return [self.bos_idx] + token_ids + [self.eos_idx]
+
+    def get_token_type_ids(self, src_token):
+        seg = []
+        for i, v in enumerate(src_token):
+            if i % 2 == 0:
+                seg.append([0] * len(v))
+            else:
+                seg.append([1] * len(v))
+        return seg
+
+    def get_cls_index(self, src_doc):
+        cls_index = [index for index, value in enumerate(src_doc) if value == self.cls_idx]
+        return cls_index
+
+# class BertData():
+#     def __init__(self, args):
+#         self.args = args
+#         self.tokenizer = BertTokenizer.from_pretrained('bert-base-uncased', do_lower_case=True)
+#         self.sep_token = '[SEP]'
+#         self.cls_token = '[CLS]'
+#         self.pad_token = '[PAD]'
+#         self.tgt_bos = '[unused0]'
+#         self.tgt_eos = '[unused1]'
+#         self.tgt_sent_split = '[unused2]'
+#         self.sep_vid = self.tokenizer.vocab[self.sep_token]
+#         self.cls_vid = self.tokenizer.vocab[self.cls_token]
+#         self.pad_vid = self.tokenizer.vocab[self.pad_token]
+
+#     def preprocess(self, src, use_bert_basic_tokenizer=False, is_test=False):
+#         if ((not is_test) and len(src) == 0):
+#             return None
+
+#         idxs = [i for i, s in enumerate(src)]
+#         src_txt = src
+
+#         # add cls/sep tokens front and end
+#         text = ' {} {} '.format(self.sep_token, self.cls_token).join(src_txt)
+#         src_subtokens = self.tokenizer.tokenize(text)
+#         src_subtokens = [self.cls_token] + src_subtokens + [self.sep_token]
+#         src_subtoken_idxs = self.tokenizer.convert_tokens_to_ids(src_subtokens)
+
+#         _segs = [-1] + [i for i, t in enumerate(src_subtoken_idxs) if t == self.sep_vid]
+#         segs = [_segs[i] - _segs[i - 1] for i in range(1, len(_segs))]
+#         segments_ids = []
+#         for i, s in enumerate(segs):
+#             if (i % 2 == 0):
+#                 segments_ids += s * [0]
+#             else:
+#                 segments_ids += s * [1]
+#         cls_ids = [i for i, t in enumerate(src_subtoken_idxs) if t == self.cls_vid]
+
+#         return src_subtoken_idxs, segments_ids, cls_ids, src_txt
 
 
 # --------------------------------
@@ -138,57 +239,52 @@ def generate_sepdata(args):
     Before that, train_articles.pt should be made such that they include every sources
     from oooo.0.bert.pt
     '''
-    #corpora = format_to_lines(args)
+    vocab = get_kobert_vocab()
+    tokenizer = nlp.data.BERTSPTokenizer(get_tokenizer(), vocab, lower=False)
 
-    corpus_type = ['train', 'valid', 'test']
-    for corpus in corpus_type:
-        logger.info(f"corpus type: {corpus}")
-        data_list = torch.load(os.path.join(args.dataset_path, args.data_type, f'bert_data/{corpus}_dataset.pt'))
+    train_dataset_y = torch.load(os.path.join(args.dataset_path, args.data_type, 'train_ydocs.pt'))
+    train_dataset_n = torch.load(os.path.join(args.dataset_path, args.data_type, 'train_ndocs.pt'))
 
-        # shuffle dataset
-        if True:
-            random.shuffle(data_list)
+    valid_dataset_y = torch.load(os.path.join(args.dataset_path, args.data_type, 'valid_ydocs.pt'))
+    valid_dataset_n = torch.load(os.path.join(args.dataset_path, args.data_type, 'valid_ndocs.pt'))
 
-        logger.info("Start making dataset---")
-        fin_dataset = _make_data(args=args,
-                                dataset=data_list,
-                                y_ratio=args.y_ratio,
-                                use_stair=args.use_stair,
-                                random_point=args.random_point,
-                                corpus_type=corpus)
+    #data_list = torch.load(os.path.join(args.dataset_path, args.data_type, f'bert_data/{corpus}_dataset.pt'))
 
-        logger.info("Done.")
+    # shuffle dataset
+    # if True:
+    #     random.shuffle(data_list)
 
-        # save
-        fix_flag = 'random' if args.random_point else 'fixed'
-        save_pth = os.path.join(args.dataset_path, args.data_type, f'bertsep_data/bertsep_dt_{corpus}_w{args.window_size}_{fix_flag}.pt')
-        torch.save(fin_dataset, save_pth)
-        logger.info(f"SepBert Dataset for {corpus} saved at: {save_pth}")
+    logger.info("Start making dataset---")
+    trainset = _make_data(args=args, dataset=[train_dataset_y, train_dataset_n], use_stair=args.use_stair,
+                            random_point=args.random_point, corpus_type='train', vocab=vocab, tokenizer=tokenizer)
+
+    valset = _make_data(args=args, dataset=[valid_dataset_y, valid_dataset_n], use_stair=args.use_stair,
+                        random_point=args.random_point, corpus_type='valid', vocab=vocab, tokenizer=tokenizer)
+
+    logger.info("Done.")
+
 
     # memory clear
-    fin_dataset, sep_dataset = [], []
+    trainset, valset = [], []
     gc.collect()
 
 
-def _make_data(args, dataset, y_ratio=0.5, use_stair=True, random_point=False, corpus_type=''):
+def _make_data(args, dataset, use_stair=True, random_point=False, corpus_type='', vocab=None, tokenizer=None):
     '''
     For given dataset(list), split them into y/n datasets and generate final dataset used for training.
     '''
     ws = args.window_size
-    y_ratio = 0.5 if corpus_type in ['valid', 'test'] else y_ratio
-    
+    y_cands, n_cands = dataset[0], dataset[1]
     tot_len = dataset.__len__()
-    y_len = int(tot_len * y_ratio)
-    n_len = tot_len - y_len
+    n_len = len(n_cands)
 
-    y_cands, n_cands = dataset[:y_len], dataset[y_len:]
     y_dataset, n_dataset = [], []
 
     # Define Bert preprocessor
-    bert = BertData(args)
+    bert = BertData(args, vocab, tokenizer)
 
     # create mixed dataset (y)
-    for i in tqdm(range(y_len - 1), desc="making y_dataset"):
+    for lh, rh in tqdm(y_cands, desc="making y_dataset"):
         if not random_point:
             si = 0
             sj = 0
@@ -196,7 +292,7 @@ def _make_data(args, dataset, y_ratio=0.5, use_stair=True, random_point=False, c
             si = random.randint(0, (len(y_cands[i]) - ws))
             sj = random.randint(0, (len(y_cands[i+1]) - ws))
 
-        tmp_article_y = y_cands[i][si:si + ws] + y_cands[i+1][sj:sj + ws]
+        tmp_article_y = lh[si:si + ws] + rh[sj:sj + ws]
         y_dataset.append(tmp_article_y)
         #y_dataset.append({'src': tmp_article_y, 'label': 1})
 
@@ -231,13 +327,11 @@ def _make_data(args, dataset, y_ratio=0.5, use_stair=True, random_point=False, c
     fin_dataset = []
     # !!TODO!! bert.preprocess 부분 imap 추가
     for lab_idx, _set in enumerate([n_dataset, y_dataset]):
-        for source in _set:
-            if (args.lower):
-                source = [s.lower() for s in source]
-                
-            src_subtoken_idxs, segments_ids, cls_ids, src_txt = bert.preprocess(source,
-                                                                                use_bert_basic_tokenizer=args.use_bert_basic_tokenizer,
-                                                                                is_test=False)
+        print(f"working on label index: {lab_idx}")
+        for source in tqdm(_set):
+            # if (args.lower):
+            #     source = [s.lower() for s in source]
+            src_subtoken_idxs, segments_ids, cls_ids, src_txt = bert.preprocess(source, is_test=False)
             data_dict = {'src': src_subtoken_idxs,
                         'segs': segments_ids,
                         'clss': cls_ids,
@@ -246,7 +340,14 @@ def _make_data(args, dataset, y_ratio=0.5, use_stair=True, random_point=False, c
             fin_dataset.append(data_dict)
 
     random.shuffle(fin_dataset)
-    return fin_dataset
+
+
+    # save
+    save_pth = os.path.join(args.dataset_path, args.data_type, f'bertsep_data/bertsep_dt_{corpus_type}_w{args.window_size}.pt')
+    torch.save(fin_dataset, save_pth)
+    logger.info(f"SepBert Dataset for {corpus_type} saved at: {save_pth}")
+
+    return
 
 
 def generate_basedata(args):
@@ -320,7 +421,6 @@ def generate_basedata(args):
         save_pth = os.path.join(args.dataset_path, args.data_type, f'bert_data/{k}_dataset.pt')
         torch.save(corpora[k], save_pth)
         logger.info(f"Dataset: {k} saved. Length: {len(corpora[k])}")
-
 
 def _format_to_lines(params):
     f, args = params

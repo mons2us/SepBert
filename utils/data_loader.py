@@ -10,6 +10,25 @@ import IPython
 from others.logging import logger
 from others.tokenization import BertTokenizer
 
+import gluonnlp as nlp
+from kobert.utils import get_tokenizer, tokenizer
+from kobert.utils import download as _download
+from kobert.pytorch_kobert import get_pytorch_kobert_model
+
+
+def get_kobert_vocab(cachedir="./tmp/"):
+    # Add BOS,EOS vocab
+    vocab_info = tokenizer
+    vocab_file = _download(
+        vocab_info["url"], vocab_info["fname"], vocab_info["chksum"], cachedir=cachedir
+    )
+
+    vocab_b_obj = nlp.vocab.BERTVocab.from_sentencepiece(
+        vocab_file, padding_token="[PAD]", bos_token="[BOS]", eos_token="[EOS]"
+    )
+
+    return vocab_b_obj
+
 
 class Batch:
     '''
@@ -35,12 +54,15 @@ class Batch:
             src_str = [x[3] for x in data]
             sep_label = [x[4] for x in data]
             
-            src = torch.tensor(self._pad(pre_src, 0))
-            segs = torch.tensor(self._pad(pre_segs, 0))
-            mask_src = ~(src == 0)
+            # !!padding token is 1 for kor!!
+            src = torch.tensor(self._pad(pre_src, 1))
+            segs = torch.tensor(self._pad(pre_segs, 1))
+            mask_src = ~(src == 1)
+
             clss = torch.tensor(self._pad(pre_clss, -1))
             mask_cls = ~(clss == -1)
             clss[clss == -1] = 0
+
             sep_label = torch.tensor(sep_label)
 
             setattr(self, 'src', src.to(device))
@@ -165,13 +187,17 @@ class DataIterator:
 
     def preprocess(self, ex, is_test):
         args = self.args
-
         src = ex['src']
         segs = ex['segs']
         clss = ex['clss']
+        
+        # separation evaluation인 경우
+        if is_test:
+            return src, segs, clss, '', 0
+
         src_txt = ex['src_txt']
         sep_label = ex['sep_label']
-
+        
         end_id = [src[-1]] # [102]
         src = src[:-1][:self.args.max_pos - 1] + end_id
         segs = segs[:self.args.max_pos]
@@ -191,8 +217,8 @@ class DataIterator:
         for ex in data:
             if (len(ex['src']) == 0):
                 continue
-
             ex = self.preprocess(ex, self.is_test)
+
             if not ex:
                 continue
 
@@ -253,7 +279,8 @@ class TextLoader:
     It takes as init param the 'window size', which later results in (window_size * 2)*dim embedding
     '''
     def __init__(self, args, device):
-        self.tokenizer = BertTokenizer.from_pretrained('bert-base-uncased', do_lower_case=True)
+        self.vocab = get_kobert_vocab(cachedir=args.temp_dir)
+        self.tokenizer = nlp.data.BERTSPTokenizer(get_tokenizer(), self.vocab, lower=False)
         self.device = device
         self.args = args
 
@@ -264,8 +291,11 @@ class TextLoader:
         '''
         args = self.args
         device = self.device
-        sep_vid = self.tokenizer.vocab['[SEP]']
-        cls_vid = self.tokenizer.vocab['[CLS]']
+
+        sep_vid = self.vocab.token_to_idx['[SEP]']
+        cls_vid = self.vocab.token_to_idx['[CLS]']
+        pad_idx = self.vocab["[PAD]"]
+
         source = source if isinstance(source, list) else [source]
 
         def _process_src(raw):
@@ -276,16 +306,19 @@ class TextLoader:
             # for each case when using Bert or BertSum
 
             avg_token_num = self._get_avg_token_num(args)
-            src_tokens = [self.tokenizer.tokenize(r)[:avg_token_num] for r in raw.split('\n')]
+            src_tokens = [self.tokenizer(r)[:avg_token_num] for r in raw.split('\n')]
             #assert len(src_tokens) == args.window_size*2
 
             # Subtokenize
-            if args.backbone_type == 'bert':
-                src_subtokens = [['[CLS]'] + _set + ['[SEP]'] if i == 0
-                                    else _set + ['[SEP]']
-                                    for i, _set in enumerate(src_tokens)]
-            elif args.backbone_type == 'bertsum':
-                src_subtokens = [['[CLS]'] + _set + ['[SEP]'] for _set in src_tokens]
+            # !!TODO!! Change backbone_type == bert
+            # 이렇게 하면 테스트 시 backbone_type가 무조건 bertsum이어야 함
+            src_subtokens = [['[CLS]'] + _set + ['[SEP]'] for _set in src_tokens]
+            # if args.backbone_type == 'bert':
+            #     src_subtokens = [['[CLS]'] + _set + ['[SEP]'] if i == 0
+            #                         else _set + ['[SEP]']
+            #                         for i, _set in enumerate(src_tokens)]
+            # elif args.backbone_type == 'bertsum':
+            #     src_subtokens = [['[CLS]'] + _set + ['[SEP]'] for _set in src_tokens]
 
             raw_original = raw.split('\n')
             raw = ' '.join([' '.join(s) for s in src_subtokens])

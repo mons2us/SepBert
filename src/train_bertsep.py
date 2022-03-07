@@ -12,8 +12,8 @@ import signal
 import time
 
 import torch
-import distributed
 
+from utils import distributed
 from src.trainer import build_trainer
 from src.evaluator import build_evaluator, build_sep_evaluator
 #from models.trainer_ext import build_trainer
@@ -24,7 +24,7 @@ from others.logging import logger, init_logger
 
 model_flags = ['hidden_size', 'ff_size', 'heads', 'inter_layers', 'encoder', 'ff_actv', 'use_interval', 'rnn_size']
 
-def train_multi_ext(args):
+def train_multi_sep(args):
     """ Spawns 1 process per GPU """
     init_logger()
 
@@ -38,6 +38,7 @@ def train_multi_ext(args):
     # Train with multiprocessing.
     procs = []
     for i in range(nb_gpu):
+        print(f'gpu number: {i}')
         device_id = i
         procs.append(mp.Process(target=run, args=(args, device_id, error_queue,), daemon=True))
         procs[i].start()
@@ -50,14 +51,11 @@ def train_multi_ext(args):
 def run(args, device_id, error_queue):
     """ run process """
     setattr(args, 'gpu_ranks', [int(i) for i in args.gpu_ranks])
-
     try:
         gpu_rank = distributed.multi_init(device_id, args.world_size, args.gpu_ranks)
         print('gpu_rank %d' % gpu_rank)
         if gpu_rank != args.gpu_ranks[device_id]:
-            raise AssertionError("An error occurred in \
-                Distributed initialization")
-
+            raise AssertionError("An error occurred in Distributed initialization")
         train_single_sep(args, device_id)
     except KeyboardInterrupt:
         pass  # killed by parent, do nothing
@@ -97,11 +95,10 @@ class ErrorHandler(object):
         for pid in self.children_pids:
             os.kill(pid, signal.SIGINT)  # kill children processes
         (rank, original_trace) = self.error_queue.get()
-        msg = """\n\n-- Tracebacks above this line can probably
+        msg = """\n\n-- Tracebacks above this line can prFobably
                 be ignored --\n\n"""
         msg += original_trace
         raise Exception(msg)
-
 
 
 # ------------------------
@@ -116,9 +113,28 @@ class ErrorHandler(object):
 # add multi if use multi-gpu
 def train_sep(args, device_id):
     train_single_sep(args, device_id)
+    #train_multi_sep(args)
 
 def train_single_sep(args, device_id):
-    logger_pth = os.path.join(args.log_dir, '_'.join(time.asctime().split()) + '.log')
+    
+    os.makedirs(f'models/index_{args.model_index}', exist_ok=True)
+    # if os.path.exists(f'models/index_{args.model_index}'):
+    #     pass
+    # else:
+    #     answer = input(f'No such directory: models/index_{args.model_index}. Make one? [y/n]')
+    #     if answer == 'y':
+    #         os.makedirs(f'models/index_{args.model_index}', exist_ok=True)
+    #     elif answer == 'n':
+    #         print('Training Exit;')
+    #         exit()
+    #     else:
+    #         raise
+
+
+    log_dir = f'models/index_{args.model_index}'
+    logger_name = f'{args.mode}_{args.model_index}_'
+    logger_time = '_'.join(time.asctime().split()[1:4])
+    logger_pth = os.path.join(log_dir, logger_name + logger_time + '.log')
     init_logger(logger_pth)
 
     # device
@@ -155,8 +171,8 @@ def train_single_sep(args, device_id):
                         shuffle=True, is_test=False)
 
     def valid_iter_fct():
-        return DataLoader(args, load_dataset(args, 'valid', shuffle=True), args.batch_size, device,
-                        shuffle=True, is_test=False)
+        return DataLoader(args, load_dataset(args, 'valid', shuffle=False), args.batch_size, device,
+                        shuffle=False, is_test=False)
 
     model = BertSeparator(args, device, checkpoint)
     optim = model_builder.build_optim(args, model, checkpoint)
@@ -166,9 +182,16 @@ def train_single_sep(args, device_id):
     trainer.train(train_iter_fct, args.train_steps, valid_iter_fct, args.valid_steps)
 
 
-
-
 def test(args, device_id):
+
+    def _get_hyperparams(args, checkpoint):
+        opts = checkpoint['opt']
+        args.add_transformer = opts.add_transformer
+        args.classifier_type = opts.classifier_type
+        #args.classifier_type = 'conv'
+        args.window_size = opts.window_size
+        return args
+
     logger_pth = os.path.join(args.log_dir, '_'.join(time.asctime().split()) + '.log')
     init_logger(logger_pth)
     
@@ -177,6 +200,9 @@ def test(args, device_id):
     
     logger.info('Loading checkpoint from %s' % args.test_from)
     checkpoint = torch.load(args.test_from, map_location=lambda storage, loc: storage)
+
+    args = _get_hyperparams(args, checkpoint)
+
     opt = vars(checkpoint['opt'])
     for k in opt.keys():
         if (k in model_flags):
@@ -188,7 +214,7 @@ def test(args, device_id):
     
     model = BertSeparator(args, device_id, checkpoint)
 
-    # Evaluation mode    
+    # Evaluation mode
     if args.test_mode == 'cls':
         evaluator = build_evaluator(args, device_id, model)
         evaluator.cls_eval(test_iter_fct)
@@ -196,21 +222,6 @@ def test(args, device_id):
         evaluator = build_sep_evaluator(args, device_id, model)
         evaluator.sep_eval()
     
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 '''
 def validate_ext(args, device_id):
     timestep = 0

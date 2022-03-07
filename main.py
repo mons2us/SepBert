@@ -37,12 +37,12 @@ def set_seed(random_seed=227182):
     random.seed(random_seed)
 
 
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     #parser.add_argument('--task', default='ext', type=str, choices=['ext', 'abs'])
     parser.add_argument('--encoder', default='bert', type=str, choices=['bert', 'baseline'])
-    parser.add_argument('--backbone_type', default='bertsum', type=str, choices=['bert', 'bertsum'])
+    parser.add_argument('--backbone_type', default='bert', type=str, choices=['bert', 'bertsum'])
+    parser.add_argument('--classifier_type', default='linear', type=str, choices=['conv', 'linear'])
     parser.add_argument('--mode', default='train', type=str, choices=['train', 'test'])
     parser.add_argument('--random_seed', default=227182, type=int)
 
@@ -57,9 +57,9 @@ if __name__ == '__main__':
     parser.add_argument('--temp_dir', default='temp/')
 
     # dataset type
-    parser.add_argument('--data_type', default='cnndm', type=str)
+    parser.add_argument('--data_type', default='bfly', type=str)
     parser.add_argument('--window_size', default=3, type=int)
-    parser.add_argument('--y_ratio', default=0.5, type=float)
+    #parser.add_argument('--y_ratio', default=0.5, type=float)
     parser.add_argument('--use_stair', action='store_true')
     parser.add_argument('--random_point', action='store_true')
 
@@ -67,8 +67,8 @@ if __name__ == '__main__':
     parser.add_argument('--test_batch_size', default=200, type=int)
 
     parser.add_argument('--max_pos', default=512, type=int)
-    parser.add_argument('--use_interval', type=str2bool, nargs='?',const=True,default=True)
-    parser.add_argument('--large', type=str2bool, nargs='?',const=True,default=False)
+    parser.add_argument('--use_interval', type=str2bool, nargs='?', const=True, default=True)
+    parser.add_argument('--large', type=str2bool, nargs='?', const=True, default=False)
     parser.add_argument('--load_from_extractive', default='', type=str)
 
     parser.add_argument('--sep_optim', type=str2bool, nargs='?',const=True,default=False)
@@ -88,8 +88,9 @@ if __name__ == '__main__':
     parser.add_argument('--enc_dropout', default=0.2, type=float)
     parser.add_argument('--enc_layers', default=6, type=int)
 
-    # params for EXT
-    parser.add_argument('--add_transformer', action='store_true')
+    # params for sep layers
+    # !!TODO!! change ext -> sep
+    parser.add_argument('--add_transformer', type=str2bool, nargs='?', const=True, default=True)
     parser.add_argument('--ext_dropout', default=0.2, type=float)
     parser.add_argument('--ext_layers', default=2, type=int)
     parser.add_argument('--ext_hidden_size', default=768, type=int)
@@ -130,6 +131,7 @@ if __name__ == '__main__':
     # !!TODO!! test_from 바꾸기
     parser.add_argument('--test_mode', default='cls', type=str, help="[cls, sep]")
     parser.add_argument('--test_max_mode', default='max_all', type=str, help="[max_all, sep]")
+    parser.add_argument('--compare_window', type=str2bool, nargs='?', const=True, default=False)
     parser.add_argument('--test_sep_num', default=2000, type=int)
     parser.add_argument('--test_all', type=str2bool, nargs='?',const=True,default=False)
     parser.add_argument('--test_from', default='models/model_w3_fixed_step_50000.pt')
@@ -141,8 +143,11 @@ if __name__ == '__main__':
     parser.add_argument('--block_trigram', type=str2bool, nargs='?', const=True, default=True)
 
     args = parser.parse_args()
-    args.gpu_ranks = [int(i) for i in range(len(args.visible_gpus.split(',')))]
+    #args.gpu_ranks = [int(i) for i in range(len(args.visible_gpus.split(',')))]
+    args.gpu_ranks = [int(i) for i in args.visible_gpus.split(',')]
+    args.gpu_ranks = [0] if len(args.gpu_ranks) == 1 else args.gpu_ranks
     args.world_size = len(args.gpu_ranks)
+
     os.environ["CUDA_VISIBLE_DEVICES"] = args.visible_gpus
 
     device = "cpu" if args.visible_gpus == '-1' else "cuda"

@@ -12,8 +12,7 @@ def use_gpu(opt):
     """
     Creates a boolean if gpu used
     """
-    return (hasattr(opt, 'gpu_ranks') and len(opt.gpu_ranks) > 0) or \
-           (hasattr(opt, 'gpu') and opt.gpu > -1)
+    return (hasattr(opt, 'gpu_ranks') and len(opt.gpu_ranks) > 0) or (hasattr(opt, 'gpu') and opt.gpu > -1)
 
 def build_optim(model, opt, checkpoint):
     """ Build optimizer """
@@ -99,15 +98,15 @@ class Optimizer(object):
     as grad manipulations.
 
     Args:
-      method (:obj:`str`): one of [sgd, adagrad, adadelta, adam]
-      lr (float): learning rate
-      lr_decay (float, optional): learning rate decay multiplier
-      start_decay_steps (int, optional): step to start learning rate decay
-      beta1, beta2 (float, optional): parameters for adam
-      adagrad_accum (float, optional): initialization parameter for adagrad
-      decay_method (str, option): custom decay options
-      warmup_steps (int, option): parameter for `noam` decay
-      model_size (int, option): parameter for `noam` decay
+        method (:obj:`str`): one of [sgd, adagrad, adadelta, adam]
+        lr (float): learning rate
+        lr_decay (float, optional): learning rate decay multiplier
+        start_decay_steps (int, optional): step to start learning rate decay
+        beta1, beta2 (float, optional): parameters for adam
+        adagrad_accum (float, optional): initialization parameter for adagrad
+        decay_method (str, option): custom decay options
+        warmup_steps (int, option): parameter for `noam` decay
+        model_size (int, option): parameter for `noam` decay
 
     We use the default parameters for Adam that are suggested by
     the original paper https://arxiv.org/pdf/1412.6980.pdf
@@ -122,11 +121,11 @@ class Optimizer(object):
     """
 
     def __init__(self, method, learning_rate, max_grad_norm,
-                 lr_decay=1, start_decay_steps=None, decay_steps=None,
-                 beta1=0.9, beta2=0.999,
-                 adagrad_accum=0.0,
-                 decay_method=None,
-                 warmup_steps=4000, weight_decay=0):
+                lr_decay=1, start_decay_steps=None, decay_steps=None,
+                beta1=0.9, beta2=0.999,
+                adagrad_accum=0.0,
+                decay_method=None,
+                warmup_steps=4000, weight_decay=0):
         self.last_ppl = None
         self.learning_rate = learning_rate
         self.original_lr = learning_rate
@@ -191,14 +190,11 @@ class Optimizer(object):
                 self.original_lr *
                  min(self._step ** (-0.5),
                      self._step * self.warmup_steps**(-1.5)))
-
         else:
-            if ((self.start_decay_steps is not None) and (
-                     self._step >= self.start_decay_steps)):
+            if ((self.start_decay_steps is not None) and (self._step >= self.start_decay_steps)):
                 self.start_decay = True
             if self.start_decay:
-                if ((self._step - self.start_decay_steps)
-                   % self.decay_steps == 0):
+                if ((self._step - self.start_decay_steps) % self.decay_steps == 0):
                     self.learning_rate = self.learning_rate * self.lr_decay
 
         if self.method != 'sparseadam':

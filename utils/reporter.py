@@ -6,6 +6,8 @@ import time
 import math
 import sys
 
+from torch.distributed import get_rank
+
 from utils.distributed import all_gather_list
 from others.logging import logger
 
@@ -46,8 +48,7 @@ class ReportMgrBase(object):
     def log(self, *args, **kwargs):
         logger.info(*args, **kwargs)
 
-    def report_training(self, step, num_steps, learning_rate,
-                        report_stats, multigpu=False):
+    def report_training(self, step, num_steps, learning_rate, report_stats, multigpu=False):
         """
         This is the user-defined batch-level traing progress
         report function.
@@ -61,8 +62,7 @@ class ReportMgrBase(object):
             report_stats(Statistics): updated Statistics instance.
         """
         if self.start_time < 0:
-            raise ValueError("""ReportMgr needs to be started
-                                (set 'start_time' or use 'start()'""")
+            raise ValueError("""ReportMgr needs to be started (set 'start_time' or use 'start()'""")
 
         if multigpu:
             report_stats = Statistics.all_gather_stats(report_stats)
@@ -174,7 +174,6 @@ class Statistics(object):
 
     @staticmethod
     def all_gather_stats_list(stat_list, max_size=4096):
-        from torch.distributed import get_rank
         """
         Gather a `Statistics` list accross all processes/nodes
         Args:
@@ -186,7 +185,7 @@ class Statistics(object):
         """
         # Get a list of world_size lists with len(stat_list) Statistics objects
         all_stats = all_gather_list(stat_list, max_size=max_size)
-
+        
         our_rank = get_rank()
         our_stats = all_stats[our_rank]
         for other_rank, stats in enumerate(all_stats):
@@ -200,7 +199,7 @@ class Statistics(object):
         """
         Update statistics by suming values with another `Statistics` object
         Args:
-            stat: another statistic object
+            stat: another statistic objects
         """
         self.loss += stat.loss
         self.normalization += stat.normalization

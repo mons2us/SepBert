@@ -5,7 +5,7 @@ import torch
 from tqdm import tqdm
 from tensorboardX import SummaryWriter
 
-import distributed
+from utils import distributed
 from utils.reporter import ReportMgr, Statistics
 from others.logging import logger
 #from others.utils import test_rouge, rouge_results_to_str
@@ -37,6 +37,7 @@ def build_trainer(args, device_id, model, optim):
         gpu_rank = 0
         n_gpu = 0
 
+    print(f'gpu_ranks: {args.gpu_ranks}')
     print('gpu_rank %d' % gpu_rank)
 
     tensorboard_log_dir = os.path.join(args.model_path, f'index_{args.model_index}')
@@ -131,7 +132,7 @@ class Trainer(object):
         normalization = 0
         train_iter = train_iter_fct()
 
-        valid_len = len([d for d in valid_iter_fct()]) # takes time, but for tqdm
+        #valid_len = len([d for d in valid_iter_fct()]) # takes time, but for tqdm
         valid_iter = valid_iter_fct()
 
         total_stats = Statistics()
@@ -142,7 +143,6 @@ class Trainer(object):
             reduce_counter = 0
             for i, batch in enumerate(train_iter):
                 '''
-                About batch,
                 하나의 배치는 아래와 같은 형태
                 tensor([[  101, 10587,  4783,  ...,   102,     0,     0],
                         [  101,  1006, 13229,  ...,   102,     0,     0],
@@ -158,9 +158,10 @@ class Trainer(object):
                     accum += 1
                     if accum == self.grad_accum_count:
                         reduce_counter += 1
+
                         if self.n_gpu > 1:
                             normalization = sum(distributed.all_gather_list(normalization))
-                        
+
                         # For an iteration of training,
                         # do train -> update statistics (report manager) 
                         self._gradient_accumulation(true_batchs, normalization, total_stats, report_stats)
@@ -182,19 +183,19 @@ class Trainer(object):
 
                 # Validation
                 if (step % args.valid_steps == 0):
-                    self.validate(valid_iter=valid_iter, step=step, valid_len=valid_len)
+                    self.validate(valid_iter=valid_iter, step=step)
                     valid_iter = valid_iter_fct()
 
             train_iter = train_iter_fct()
         return total_stats
 
-    def validate(self, valid_iter=None, step=0, valid_len=0):
+    def validate(self, valid_iter=None, step=0):
         logger.info("Start Validation")
         self.model.eval()
         val_stats = Statistics()
         val_norm = 0
         with torch.no_grad():
-            for i, batch in tqdm(enumerate(valid_iter), total=valid_len):
+            for i, batch in tqdm(enumerate(valid_iter)):
                 val_norm += batch.batch_size
                 src = batch.src
                 segs = batch.segs
@@ -238,6 +239,8 @@ class Trainer(object):
             n_correct = (sep_label == (sep_pred > 0)).sum().to('cpu').item()
 
             loss.backward()
+
+            # TODO 이걸 해야되나?
             # loss.div(float(normalization)).backward()
 
             # Training process report (statistics)
@@ -258,10 +261,8 @@ class Trainer(object):
         # update after gradients are accumulated
         if self.grad_accum_count > 1:
             if self.n_gpu > 1:
-                grads = [p.grad.data for p in self.model.parameters()
-                        if p.requires_grad and p.grad is not None]
-                distributed.all_reduce_and_rescale_tensors(
-                    grads, float(1))
+                grads = [p.grad.data for p in self.model.parameters() if p.requires_grad and p.grad is not None]
+                distributed.all_reduce_and_rescale_tensors(grads, float(1))
             self.optim.step()
 
     def _save(self, step):
@@ -308,15 +309,13 @@ class Trainer(object):
             return Statistics.all_gather_stats(stat)
         return stat
 
-    def _maybe_report_training(self, step, num_steps, learning_rate,
-                                report_stats):
+    def _maybe_report_training(self, step, num_steps, learning_rate, report_stats):
         """
         Simple function to report training stats (if report_manager is set)
         see `onmt.utils.ReportManagerBase.report_training` for doc
         """
         if self.report_manager is not None:
-            return self.report_manager.report_training(
-                step, num_steps, learning_rate, report_stats, multigpu=self.n_gpu > 1)
+            return self.report_manager.report_training(step, num_steps, learning_rate, report_stats, multigpu=self.n_gpu > 1)
 
     def _report_step(self, learning_rate, step, train_stats=None, valid_stats=None):
         """
@@ -341,7 +340,6 @@ class Trainer(object):
     #     Returns:
     #         :obj:`nmt.Statistics`: validation loss statistics
     #     """
-
     #     # Set model in validating mode.
     #     def _get_ngrams(n, text):
     #         ngram_set = set()

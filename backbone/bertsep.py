@@ -12,46 +12,57 @@ class Classifier(nn.Module):
         super(Classifier, self).__init__()
         if window_size == 1:
             conv_kernel_size = 2
-            linear_channel = 1
+            flat_size = 256
         else:
             conv_kernel_size = window_size*2-2
-            linear_channel = 3
-        
+            flat_size = 256 * 3
+
         # block1
-        self.block1 = nn.Sequential(
-            nn.Conv1d(in_channels=768, out_channels=256, kernel_size=conv_kernel_size),
-            nn.LayerNorm([256, 3]),
-            nn.ReLU(),
-            
-            nn.Conv1d(in_channels=256, out_channels=64, kernel_size=linear_channel),
-            nn.LayerNorm([64, 1]),
-            nn.ReLU(),
-        )
+        if window_size == 1:
+            self.block1 = nn.Sequential(
+                nn.Conv1d(in_channels=768, out_channels=256, kernel_size=conv_kernel_size),
+                nn.LayerNorm([256, 1]),
+                nn.ReLU(),
+            )
+        else:
+            self.block1 = nn.Sequential(
+                nn.Conv1d(in_channels=768, out_channels=256, kernel_size=conv_kernel_size),
+                nn.LayerNorm([256, 3]),
+                nn.ReLU(),
+            )
         
         self.block2 = nn.Sequential(
-            nn.Linear(64, 32),
-            nn.LayerNorm([32]),
-            nn.ReLU(),
-        )
-        
-        self.linear_block = nn.Sequential(
-            nn.Linear(32, 1),
+            nn.Linear(flat_size, 1),
         )
         
     def forward(self, x):
         x = x.transpose(1, 2).contiguous() # B * N * C --> B * C * N
-        try:
-            out = self.block1(x)
-        except ValueError as e:
-            import IPython
-            IPython.embed()
-
-        batch_size = out.size()[0]
+        out = self.block1(x)
+        batch_size = out.size(0)
         out = out.view(batch_size, -1)
         out = self.block2(out)
-        out = self.linear_block(out)
         return out.view(-1)
 
+
+class LinearClassifier(nn.Module):
+    def __init__(self, window_size):
+        super(LinearClassifier, self).__init__()
+        flat_size = 768 * window_size * 2
+        # self.linear_layer = nn.Sequential(
+        #     nn.Linear(flat_size, 32),
+        #     nn.LayerNorm([32]),
+        #     nn.ReLU(),
+        #     nn.Linear(32, 1)
+        # )
+        self.linear_layer = nn.Sequential(
+            nn.Linear(flat_size, 1),
+        )
+
+    def forward(self, x):
+        batch_size = x.size(0)
+        x = x.view(batch_size, -1)
+        out = self.linear_layer(x)
+        return out.view(-1)
 
 class PositionalEncoding(nn.Module):
     def __init__(self, dropout, dim, max_len=5000):
@@ -70,7 +81,6 @@ class PositionalEncoding(nn.Module):
         emb = emb * math.sqrt(self.dim)
         if (step):
             emb = emb + self.pe[:, step][:, None, :]
-
         else:
             emb = emb + self.pe[:, :emb.size(1)]
         emb = self.dropout(emb)
@@ -83,7 +93,6 @@ class PositionalEncoding(nn.Module):
 class TransformerEncoderLayer(nn.Module):
     def __init__(self, d_model, heads, d_ff, dropout):
         super(TransformerEncoderLayer, self).__init__()
-
         self.self_attn = MultiHeadedAttention(
             heads, d_model, dropout=dropout)
         self.feed_forward = PositionwiseFeedForward(d_model, d_ff, dropout)

@@ -63,7 +63,7 @@ if __name__ == '__main__':
     #parser.add_argument("-select_mode", default='greedy', type=str)
     #parser.add_argument("-map_path", default='../../data/')
     parser.add_argument("-dataset_path", default='dataset/')
-    parser.add_argument("-data_type", default='cnndm', type=str)
+    parser.add_argument("-data_type", default='bfly', type=str)
     parser.add_argument("-train_ratio", default=0.8, type=float)
     parser.add_argument("-test_only", action='store_true')
     #parser.add_argument("-test_sep_num", default=-1, type=int)

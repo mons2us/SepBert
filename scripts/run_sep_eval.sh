@@ -1,4 +1,4 @@
-# declare -A cri_dict=(['A']='month' ['B']='week')
+declare -A ws_dict=(['NE01']=1 ['NE02']=2 ['NF03']=3 ['NE04']=4 ['NE05']=5 ['E05']=5)
 # declare -A maxW_dict=(['week']=20 ['month']=8)
 # declare -A name_dict=(['madgan']='madgan')
 
@@ -6,29 +6,28 @@
 # criterion=${cri_dict[${target_name}]}
 # max_window=${maxW_dict[$criterion]}
 
-# # model params
-# gpu_i=0
-# n_epochs=150
-# learning_rate=0.01
-# p_num=2
-# arch='madgan'
+#thresh=0.85
 
-for index in `seq 10000 10000 200000`
+for id in NF03
 do
-    python main.py \
-            --mode test \
-            --test_mode sep \
-            --visible_gpus 0 \
-            --window_size 3 \
-            --test_from models/index_A03/model_w3_fixed_step_$index.pt \
-            --data_type bbc_news \
-            --test_sep_num -1 \
-            --test_max_mode max_one \
-            --threshold 0.8 \
-            --add_transformer
+    for thresh in `seq 0.85 0.05 0.9`
+    do
+        ws=${ws_dict[${id}]}
+        for compare in True
+        do
+            for num in `seq 10000 10000 180000`
+            do
+                echo $id window_size: $ws threshold: $thresh
+                python main.py \
+                        --mode test \
+                        --test_mode sep \
+                        --visible_gpus 1 \
+                        --test_from models/index_${id}/model_w${ws}_fixed_step_$num.pt \
+                        --data_type bfly \
+                        --test_sep_num -1 \
+                        --threshold $thresh \
+                        --compare_window $compare
+            done
+        done
+    done
 done
-
-# for index in `seq 0 2 10`
-# do
-#     echo print_$index.pt
-# done

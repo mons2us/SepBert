@@ -7,8 +7,29 @@ from torch.nn.init import xavier_uniform_
 
 from others.logging import logger
 #from decoder import TransformerDecoder
-from backbone.bertsep import Classifier, SepTransformerEncoder
+from backbone.bertsep import Classifier, LinearClassifier, SepTransformerEncoder
 from backbone.optimizers import Optimizer
+
+import gluonnlp as nlp
+from kobert.utils import get_tokenizer, tokenizer
+from kobert.utils import download as _download
+from kobert.pytorch_kobert import get_pytorch_kobert_model
+
+
+def get_kobert_vocab(cachedir="./tmp/"):
+    # Add BOS,EOS vocab
+    vocab_info = tokenizer
+    vocab_file = _download(
+        vocab_info["url"], vocab_info["fname"], vocab_info["chksum"], cachedir=cachedir
+    )
+
+    vocab_b_obj = nlp.vocab.BERTVocab.from_sentencepiece(
+        vocab_file, padding_token="[PAD]", bos_token="[BOS]", eos_token="[EOS]"
+    )
+
+    return vocab_b_obj
+
+
 
 def build_optim(args, model, checkpoint):
     """ Build optimizer """
@@ -106,10 +127,15 @@ class Bert(nn.Module):
     def __init__(self, args):
         super(Bert, self).__init__()
         temp_dir = args.temp_dir
+
         if args.large:
             self.model = BertModel.from_pretrained('bert-large-uncased', cache_dir=temp_dir)
         else:
-            self.model = BertModel.from_pretrained('bert-base-uncased', cache_dir=temp_dir)
+            vocab = get_kobert_vocab(temp_dir)
+            self.model, _ = get_pytorch_kobert_model(cachedir=temp_dir)
+            # add [BOS], [EOS]
+            self.model.resize_token_embeddings(len(vocab)) 
+            #self.model = BertModel.from_pretrained('bert-base-uncased', cache_dir=temp_dir)
         
         # Load bertsum weight
         # if mode is test or backbone used is BERT, there's no need to load bertsum weights
@@ -119,8 +145,8 @@ class Bert(nn.Module):
         else:
             logger.info("Not Using BertSum weights")
             
-        # whether finetune the backbone(bert or bertsum)
-        self.finetune = args.finetune_bert
+        # whether finetune the backbone (bert or bertsum)
+        self.finetune = True if (args.finetune_bert) and (args.mode == 'train') else False
         if args.mode == 'train':
             if self.finetune:
                 logger.info(f"Finetuning {args.backbone_type}")
@@ -128,7 +154,7 @@ class Bert(nn.Module):
                 logger.info(f"Not finetuning backbone({args.backbone_type})")
 
     def _load_bertsum_weight(self):
-        bertsum_weight = torch.load('models/bertsum_model_best.pt')
+        bertsum_weight = torch.load('models/model_step_130000.pt')
         bert_dict = self.model.state_dict()
         print("before:", bert_dict['encoder.layer.0.attention.self.query.weight'])
         bertsum_dict = bertsum_weight['model']
@@ -143,11 +169,11 @@ class Bert(nn.Module):
 
     def forward(self, x, segs, mask):
         if self.finetune:
-            top_vec, _ = self.model(x, segs, attention_mask=mask)
+            top_vec, _ = self.model(x, token_type_ids=segs, attention_mask=mask)
         else:
             self.eval()
             with torch.no_grad():
-                top_vec, _ = self.model(x, segs, attention_mask=mask)
+                top_vec, _ = self.model(x, token_type_ids=segs, attention_mask=mask)
         return top_vec
 
 
@@ -160,11 +186,15 @@ class BertSeparator(nn.Module):
         self.bert = Bert(args)
         
         if args.add_transformer:
-            logger.info(f"Using Transformer Layer: Bert --> [Transformer * {args.ext_layers}] --> Classifier")
+            logger.info(f"Using Transformer Layer: {args.backbone_type} --> [transformer * {args.ext_layers}] --> classifier")
             self.sep_layer = SepTransformerEncoder(self.bert.model.config.hidden_size, args.ext_ff_size, args.ext_heads, args.ext_dropout, args.ext_layers)
         else:
-            logger.info(f"Not Using Transformer Layer: Bert --> (No Transformer) --> Classifier")
-        self.classifier = Classifier(args.window_size)
+            logger.info(f"Not Using Transformer Layer: {args.backbone_type} --> (no transformer) --> classifier")
+
+        if args.classifier_type == 'conv':
+            self.classifier = Classifier(args.window_size)
+        else:
+            self.classifier = LinearClassifier(args.window_size)
 
         # if (args.encoder == 'baseline'):
         #     bert_config = BertConfig(self.bert.model.config.vocab_size, hidden_size=args.ext_hidden_size,

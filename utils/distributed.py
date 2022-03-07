@@ -8,20 +8,18 @@ from __future__ import print_function
 
 import math
 import pickle
-
+import torch
 import torch.distributed
-
 from others.logging import logger
-
-
 def is_master(gpu_ranks, device_id):
     return gpu_ranks[device_id] == 0
 
 
-def multi_init(device_id, world_size,gpu_ranks):
-    print(gpu_ranks)
+def multi_init(device_id, world_size, gpu_ranks):
     dist_init_method = 'tcp://localhost:10000'
     dist_world_size = world_size
+    torch.cuda.set_device(device_id)
+
     torch.distributed.init_process_group(
         backend='nccl', init_method=dist_init_method,
         world_size=dist_world_size, rank=gpu_ranks[device_id])
@@ -29,15 +27,11 @@ def multi_init(device_id, world_size,gpu_ranks):
     if not is_master(gpu_ranks, device_id):
     #     print('not master')
         logger.disabled = True
-
     return gpu_rank
 
 
-
-def all_reduce_and_rescale_tensors(tensors, rescale_denom,
-                                   buffer_size=10485760):
+def all_reduce_and_rescale_tensors(tensors, rescale_denom, buffer_size=10485760):
     """All-reduce and rescale tensors in chunks of the specified size.
-
     Args:
         tensors: list of Tensors to all-reduce
         rescale_denom: denominator for rescaling summed Tensors
@@ -91,8 +85,7 @@ def all_reduce_and_rescale_tensors(tensors, rescale_denom,
 def all_gather_list(data, max_size=4096):
     """Gathers arbitrary data from all nodes into a list."""
     world_size = torch.distributed.get_world_size()
-    if not hasattr(all_gather_list, '_in_buffer') or \
-            max_size != all_gather_list._in_buffer.size():
+    if not hasattr(all_gather_list, '_in_buffer') or max_size != all_gather_list._in_buffer.size():
         all_gather_list._in_buffer = torch.cuda.ByteTensor(max_size)
         all_gather_list._out_buffers = [
             torch.cuda.ByteTensor(max_size)
@@ -110,7 +103,6 @@ def all_gather_list(data, max_size=4096):
     in_buffer[0] = enc_size // 255  # this encoding works for max_size < 65k
     in_buffer[1] = enc_size % 255
     in_buffer[2:enc_size+2] = torch.ByteTensor(list(enc))
-
     torch.distributed.all_gather(out_buffers, in_buffer.cuda())
 
     results = []
