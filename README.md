@@ -1,7 +1,7 @@
 # KoBERTSEG: Local Context Based Topic Segmentation Using KoBERT
 
 This is an official code for **\<KoBERTSEG: Local Context Based Topic Segmentation Using KoBERT, JKIIE, 2022>.**<br>
-<i>Codes for building backbone BERT architecture refers to [Presumm](!https://github.com/nlpyang/PreSumm).</i>
+<i>Codes for building backbone BERT architecture refers to [Presumm](https://github.com/nlpyang/PreSumm).</i>
 ## KoBERTSEG
 
 ### Highlights
